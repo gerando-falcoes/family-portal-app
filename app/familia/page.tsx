@@ -1,28 +1,87 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
 import { AuthService } from "@/lib/auth"
-import { mockFamilies, mockAssessments } from "@/lib/mock-data"
+import { mockFamilies, mockAssessments, updateFamily } from "@/lib/mock-data"
 import type { Family, Assessment } from "@/lib/types"
-import { Phone, Mail, MessageCircle, MapPin, Users, Baby, LogOut, TrendingUp } from "lucide-react"
+import { Phone, Mail, MessageCircle, MapPin, Users, Baby, LogOut, TrendingUp, Edit } from "lucide-react"
+import { EditFamilyModal } from "./components/EditFamilyModal"
+
+// Animações
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+  },
+}
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1, 
+    transition: { duration: 0.5, ease: "easeOut" } 
+  },
+}
+
+function FamilyPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-48" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-36" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <Skeleton className="h-5 w-64" />
+
+        {/* Cards Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-[200px] w-full" />
+          <Skeleton className="h-[200px] w-full" />
+          <Skeleton className="h-[200px] w-full" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-[300px] w-full" />
+          <Skeleton className="h-[300px] w-full" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function FamiliaPage() {
   const [family, setFamily] = useState<Family | null>(null)
   const [assessments, setAssessments] = useState<Assessment[]>([])
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     const user = AuthService.getCurrentUser()
     if (user?.familyId) {
-      const familyData = mockFamilies.find((f) => f.id === user.familyId)
-      const familyAssessments = mockAssessments.filter((a) => a.familyId === user.familyId)
-
-      setFamily(familyData || null)
-      setAssessments(familyAssessments)
+      // Simula um delay de carregamento para visualização do skeleton
+      setTimeout(() => {
+        const familyData = mockFamilies.find((f) => f.id === user.familyId)
+        const familyAssessments = mockAssessments.filter((a) => a.familyId === user.familyId)
+        setFamily(familyData || null)
+        setAssessments(familyAssessments)
+      }, 500)
     }
   }, [])
 
@@ -31,224 +90,251 @@ export default function FamiliaPage() {
     router.push("/")
   }
 
+  const handleSaveFamily = (updatedData: Partial<Family>) => {
+    if (!family) return
+    setIsLoading(true)
+    try {
+      const updatedFamily = updateFamily(family.id, updatedData)
+      setFamily(updatedFamily)
+      toast({
+        title: "Sucesso!",
+        description: "Os dados da família foram atualizados.",
+      })
+      setIsEditModalOpen(false)
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar os dados da família.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const latestAssessment = assessments[0]
 
   if (!family) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p>Carregando dados da família...</p>
-      </div>
-    )
+    return <FamilyPageSkeleton />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">{family.name}</h1>
-            <Badge
-              variant={family.status === "Ativa" ? "default" : "secondary"}
-              className="bg-green-100 text-green-800 border-green-200"
-            >
-              {family.status}
-            </Badge>
-          </div>
-          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2 bg-transparent">
-            <LogOut className="w-4 h-4" />
-            Sair
-          </Button>
-        </div>
+    <>
+      <motion.div 
+        className="min-h-screen bg-background p-4 sm:p-6 lg:p-8"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <motion.div variants={itemVariants} className="flex flex-wrap justify-between items-center gap-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-foreground">{family.name}</h1>
+              <Badge variant={'green'}>
+                {family.status}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsEditModalOpen(true)} aria-label="Editar Família">
+                <Edit className="w-4 h-4 mr-2" />
+                Editar Família
+              </Button>
+            </div>
+          </motion.div>
 
-        <p className="text-gray-600">ID da Família: {family.id}</p>
+          <motion.p variants={itemVariants} className="text-muted-foreground">ID da Família: {family.id}</motion.p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Contatos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Phone className="w-5 h-5" />
-                Contatos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-600">Telefone</p>
-                  <p className="font-medium">{family.contacts.phone}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <MessageCircle className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-600">WhatsApp</p>
-                  <p className="font-medium">{family.contacts.whatsapp}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-600">Email</p>
-                  <p className="font-medium">{family.contacts.email}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dados Socioeconômicos */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Dados Socioeconômicos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">Faixa de Renda</p>
-                <p className="font-medium">{family.socioeconomic.incomeRange}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-600">Tamanho da Família</p>
-                  <p className="font-medium">{family.socioeconomic.familySize} pessoas</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Baby className="w-4 h-4 text-gray-500" />
-                <div>
-                  <p className="text-sm text-gray-600">Nº de Crianças</p>
-                  <p className="font-medium">{family.socioeconomic.numberOfChildren}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Endereço */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Endereço
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="font-medium">{family.address.street}</p>
-              <p className="text-gray-600">Bairro: {family.address.neighborhood}</p>
-              <p className="text-gray-600">
-                Cidade/UF: {family.address.city}, {family.address.state}
-              </p>
-              <p className="text-gray-600">Ponto de referência: {family.address.referencePoint}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dignômetro e Histórico */}
-        {latestAssessment && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Contatos */}
+            <Card className="min-h-[200px]">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Dignômetro (última avaliação)</CardTitle>
-                  <Badge
-                    className={
-                      latestAssessment.povertyLevel === "Baixo"
-                        ? "bg-blue-100 text-blue-800 border-blue-200"
-                        : latestAssessment.povertyLevel === "Médio"
-                          ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                          : "bg-red-100 text-red-800 border-red-200"
-                    }
-                  >
-                    Nível de Pobreza: {latestAssessment.povertyLevel}
-                  </Badge>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Realizada em {latestAssessment.date.toLocaleDateString("pt-BR")}
-                </p>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center py-8">
-                <div className="relative w-40 h-40">
-                  <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 42 42">
-                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e5e7eb" strokeWidth="3" />
-                    <circle
-                      cx="21"
-                      cy="21"
-                      r="15.915"
-                      fill="transparent"
-                      stroke="#10b981"
-                      strokeWidth="3"
-                      strokeDasharray={`${(latestAssessment.score / 10) * 100} 100`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-gray-900">{latestAssessment.score}</div>
-                      <div className="text-lg text-gray-600">/ 10</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  Histórico de Avaliações
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Phone className="w-5 h-5" />
+                  Contatos
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {assessments.map((assessment, index) => (
-                  <div key={assessment.id} className="border rounded-lg p-4 bg-white">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-gray-400" />
-                        <p className="font-medium text-sm">
-                          Avaliação de{" "}
-                          {assessment.date.toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">Score: {assessment.score}/10</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        className={
-                          assessment.povertyLevel === "Baixo"
-                            ? "bg-blue-100 text-blue-800 border-blue-200"
-                            : assessment.povertyLevel === "Médio"
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                              : "bg-red-100 text-red-800 border-red-200"
-                        }
-                      >
-                        {assessment.povertyLevel}
-                      </Badge>
-                      <Button variant="link" size="sm" className="text-cyan-600 hover:text-cyan-800 p-0 h-auto">
-                        Ver detalhes
-                      </Button>
-                    </div>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Telefone</p>
+                    <p className="font-medium text-foreground">{family.contacts.phone}</p>
                   </div>
-                ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">WhatsApp</p>
+                    <p className="font-medium text-foreground">{family.contacts.whatsapp}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium text-foreground">{family.contacts.email}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </div>
-        )}
 
-        <div className="flex justify-center pt-4">
-          <Button
-            onClick={() => router.push("/dignometro")}
-            className="bg-purple-600 hover:bg-purple-700 px-8 py-3 text-lg"
-          >
-            Responder Dignômetro
-          </Button>
+            {/* Dados Socioeconômicos */}
+            <Card className="min-h-[200px]">
+              <CardHeader>
+                <CardTitle className="text-foreground">Dados Socioeconômicos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Faixa de Renda</p>
+                  <p className="font-medium text-foreground">{family.socioeconomic.incomeRange}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tamanho da Família</p>
+                    <p className="font-medium text-foreground">{family.socioeconomic.familySize} pessoas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Baby className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nº de Crianças</p>
+                    <p className="font-medium text-foreground">{family.socioeconomic.numberOfChildren}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Endereço */}
+            <Card className="min-h-[200px]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <MapPin className="w-5 h-5" />
+                  Endereço
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="font-medium text-foreground">{family.address.street}</p>
+                <p className="text-muted-foreground">Bairro: {family.address.neighborhood}</p>
+                <p className="text-muted-foreground">
+                  Cidade/UF: {family.address.city}, {family.address.state}
+                </p>
+                <p className="text-muted-foreground">Ponto de referência: {family.address.referencePoint}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Dignômetro e Histórico */}
+          {latestAssessment && (
+            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-foreground">Dignômetro (última avaliação)</CardTitle>
+                    <Badge
+                      variant={ latestAssessment.povertyLevel === "Baixo"
+                          ? "blue"
+                          : latestAssessment.povertyLevel === "Médio"
+                            ? "yellow"
+                            : "red"
+                      }
+                    >
+                      Nível de Pobreza: {latestAssessment.povertyLevel}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Realizada em {latestAssessment.date.toLocaleDateString("pt-BR")}
+                  </p>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center text-center gap-4 py-8">
+                  <div className="relative w-40 h-40">
+                    <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 42 42">
+                      <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="var(--border)" strokeWidth="3" />
+                      <circle
+                        cx="21"
+                        cy="21"
+                        r="15.915"
+                        fill="transparent"
+                        stroke="var(--primary)"
+                        strokeWidth="3"
+                        strokeDasharray={`${(latestAssessment.score / 10) * 100} 100`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold text-foreground">{latestAssessment.score}</div>
+                        <div className="text-lg text-muted-foreground">/ 10</div>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => router.push("/dignometro")}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Responder
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <TrendingUp className="w-5 h-5" />
+                    Histórico de Avaliações
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {assessments.map((assessment, index) => (
+                    <div key={assessment.id} className="border rounded-lg p-4 bg-muted/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                          <p className="font-medium text-sm text-foreground">
+                            Avaliação de{" "}
+                            {assessment.date.toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-foreground">Score: {assessment.score}/10</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge
+                          variant={ assessment.povertyLevel === "Baixo"
+                              ? "blue"
+                              : assessment.povertyLevel === "Médio"
+                                ? "yellow"
+                                : "red"
+                          }
+                        >
+                          {assessment.povertyLevel}
+                        </Badge>
+                        <Button variant="link" size="sm">
+                          Ver detalhes
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+      <EditFamilyModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        family={family}
+        onSave={handleSaveFamily}
+        isLoading={isLoading}
+      />
+    </>
   )
 }
