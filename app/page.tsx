@@ -30,7 +30,7 @@ export default function LoginPage() {
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
         })
-        router.push("/dashboard")
+        router.push("/familia")
       } else {
         toast({
           title: "Erro no login",
