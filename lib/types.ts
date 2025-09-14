@@ -75,3 +75,30 @@ export type BrazilianState =
   | "SP"
   | "SE"
   | "TO"
+
+export interface DiagnosticoQuestion {
+  id: string
+  dimensao: string
+  pergunta: string
+  resposta?: boolean
+}
+
+export interface DiagnosticoResponse {
+  id: string
+  userId: string
+  userEmail: string
+  familyId: string
+  responses: {
+    [questionId: string]: boolean
+  }
+  score: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface DiagnosticoProgress {
+  currentStep: number
+  totalSteps: number
+  completedSteps: number[]
+  currentQuestion: DiagnosticoQuestion
+}
