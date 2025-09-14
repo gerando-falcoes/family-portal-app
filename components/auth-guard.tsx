@@ -1,41 +1,25 @@
-"use client"
+'use client'
 
 import type React from "react"
-
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AuthService } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = () => {
-      // TEMPORÁRIO: Sempre considera autenticado para facilitar desenvolvimento
-      // Para reverter: use o código original abaixo
-      const authenticated = true // AuthService.isAuthenticated()
-
-      // Código original (comentado):
-      // const authenticated = AuthService.isAuthenticated()
-      // setIsAuthenticated(authenticated)
-      // if (!authenticated) {
-      //   router.push("/")
-      // }
-
-      setIsAuthenticated(authenticated)
-      setIsLoading(false)
+    if (!loading && !user) {
+      router.push('/login')
     }
+  }, [user, loading, router])
 
-    checkAuth()
-  }, [router])
-
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -46,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null
   }
 

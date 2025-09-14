@@ -1,10 +1,6 @@
-import type React from "react"
-import { AuthGuard } from "@/components/auth-guard"
+import { AuthGuard } from '@/components/auth-guard'
 
-export default function FamiliaLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function FamiliaLayout({ children }: { children: React.ReactNode }) {
   return <AuthGuard>{children}</AuthGuard>
 }
+
