@@ -17,13 +17,18 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     const checkAuth = () => {
-      const authenticated = AuthService.isAuthenticated()
+      // TEMPORÁRIO: Sempre considera autenticado para facilitar desenvolvimento
+      // Para reverter: use o código original abaixo
+      const authenticated = true // AuthService.isAuthenticated()
+
+      // Código original (comentado):
+      // const authenticated = AuthService.isAuthenticated()
+      // setIsAuthenticated(authenticated)
+      // if (!authenticated) {
+      //   router.push("/")
+      // }
+
       setIsAuthenticated(authenticated)
-
-      if (!authenticated) {
-        router.push("/")
-      }
-
       setIsLoading(false)
     }
 

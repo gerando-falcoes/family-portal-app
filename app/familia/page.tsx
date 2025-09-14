@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { AuthService } from "@/lib/auth"
 import { mockFamilies, mockAssessments, updateFamily } from "@/lib/mock-data"
 import type { Family, Assessment } from "@/lib/types"
-import { Phone, Mail, MessageCircle, MapPin, Users, Baby, LogOut, TrendingUp, Edit } from "lucide-react"
+import { Phone, Mail, MessageCircle, MapPin, Users, Baby, LogOut, TrendingUp, Edit, FileText } from "lucide-react"
 import { EditFamilyModal } from "./components/EditFamilyModal"
 
 // Animações
@@ -136,6 +136,10 @@ export default function FamiliaPage() {
               </Badge>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="default" onClick={() => router.push("/dignometro")} aria-label="Responder Diagnóstico">
+                <FileText className="w-4 h-4 mr-2" />
+                Responder Diagnóstico
+              </Button>
               <Button variant="outline" onClick={() => setIsEditModalOpen(true)} aria-label="Editar Família">
                 <Edit className="w-4 h-4 mr-2" />
                 Editar Família

@@ -24,20 +24,31 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const user = await AuthService.login(email, password)
-      if (user) {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o dashboard...",
-        })
-        router.push("/familia")
-      } else {
-        toast({
-          title: "Erro no login",
-          description: "Email ou senha incorretos.",
-          variant: "destructive",
-        })
-      }
+      // TEMPORÁRIO: Aceita qualquer login e sempre redireciona
+      // Para reverter: use o código original abaixo
+      const user = await AuthService.login(email || "temp@example.com", password || "temp")
+      
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Redirecionando para o dashboard...",
+      })
+      router.push("/familia")
+
+      // Código original (comentado):
+      // const user = await AuthService.login(email, password)
+      // if (user) {
+      //   toast({
+      //     title: "Login realizado com sucesso!",
+      //     description: "Redirecionando para o dashboard...",
+      //   })
+      //   router.push("/familia")
+      // } else {
+      //   toast({
+      //     title: "Erro no login",
+      //     description: "Email ou senha incorretos.",
+      //     variant: "destructive",
+      //   })
+      // }
     } catch (error) {
       toast({
         title: "Erro no login",
@@ -57,6 +68,11 @@ export default function LoginPage() {
             <Lock className="w-6 h-6 text-primary" />
           </div>
           <h1 className="text-2xl font-semibold text-foreground">Entrar no Portal da Família</h1>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-sm text-yellow-800">
+              <strong>Temporário:</strong> Sistema de autenticação desabilitado. Qualquer email/senha funcionará.
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
