@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
+import { supabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    // 1. Obter os dados do formulário (incluindo email e senha do novo usuário)
+    // 1. Obter os dados do formulário
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, familyData } = body;
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email e senha são necessários para criar o usuário da família' }, { status: 400 });
+    if (!email || !password || !familyData) {
+      return NextResponse.json({ error: 'Email, senha e dados da família são obrigatórios' }, { status: 400 });
     }
 
-    // 2. Chamar a Edge Function 'create-user' de forma segura
-    // As variáveis de ambiente são acessadas com segurança no lado do servidor
+    // 2. Chamar a Edge Function 'create-user' para criar o usuário
     const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-user`;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const response = await fetch(functionUrl, {
+    const userResponse = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -24,20 +24,52 @@ export async function POST(request: Request) {
       body: JSON.stringify({ email, password }),
     });
 
-    const responseData = await response.json();
+    const userData = await userResponse.json();
 
-    if (!response.ok) {
-      // Se a resposta da Edge Function não for OK, repasse o erro
-      return NextResponse.json({ error: responseData.error || 'Falha ao criar usuário na Edge Function' }, { status: response.status });
+    if (!userResponse.ok) {
+      return NextResponse.json({ error: userData.error || 'Falha ao criar usuário' }, { status: userResponse.status });
     }
 
-    // Aqui você pode adicionar a lógica para salvar os outros dados da família no banco de dados,
-    // associando-os ao ID do usuário recém-criado: responseData.user.id
+    // 3. Salvar os dados da família na tabela 'families'
+    const familyRecord = {
+      email: familyData.contacts.email,
+      name: `Família ${familyData.contacts.email.split('@')[0]}`, // Nome baseado no email
+      phone: familyData.contacts.phone,
+      whatsapp: familyData.contacts.whatsapp,
+      income_range: familyData.socioeconomic.incomeRange,
+      family_size: familyData.socioeconomic.familySize,
+      children_count: familyData.socioeconomic.numberOfChildren, // Usar children_count
+      street: familyData.address.street,
+      neighborhood: familyData.address.neighborhood,
+      city: familyData.address.city,
+      state: familyData.address.state,
+      reference_point: familyData.address.referencePoint || null,
+      status: 'ativo', // Usar 'ativo' como na estrutura real
+      // Removido user_id pois não existe na tabela
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    // 3. Retornar o sucesso para o cliente
-    return NextResponse.json({ message: 'Família e usuário criados com sucesso!', user: responseData.user });
+    const { data: familyInsertData, error: familyError } = await supabaseServerClient
+      .from('families')
+      .insert([familyRecord])
+      .select()
+      .single();
 
-  } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    if (familyError) {
+      console.error('Erro ao inserir família:', familyError);
+      return NextResponse.json({ error: 'Erro ao salvar dados da família' }, { status: 500 });
+    }
+
+    // 4. Retornar sucesso
+    return NextResponse.json({ 
+      message: 'Família e usuário criados com sucesso!', 
+      user: userData.user,
+      family: familyInsertData
+    });
+
+  } catch (error) {
+    console.error('Erro interno:', error);
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

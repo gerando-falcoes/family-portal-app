@@ -159,33 +159,33 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Progress Bar */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex justify-between text-sm text-gray-600">
-          <span>Progresso do Cadastro</span>
-          <span>{progress}%</span>
+          <span className="font-medium">Progresso do Cadastro</span>
+          <span className="font-medium">{progress}%</span>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             {/* Coluna da Esquerda */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Seção de Contatos */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Phone className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Informações de Contato</h3>
+              <div className="space-y-5">
+                <div className="pb-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-gray-600" />
+                    Informações de Contato
+                  </h3>
                 </div>
                 
                 <FormField control={form.control} name="contacts.phone" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Telefone</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Telefone</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="(11) 99999-9999" 
@@ -194,7 +194,7 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                           const formatted = formatPhone(e.target.value);
                           field.onChange(formatted);
                         }}
-                        className="bg-white"
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                       />
                     </FormControl>
                     <FormMessage />
@@ -203,7 +203,7 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="contacts.whatsapp" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">WhatsApp</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">WhatsApp</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="(11) 99999-9999" 
@@ -212,7 +212,7 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                           const formatted = formatPhone(e.target.value);
                           field.onChange(formatted);
                         }}
-                        className="bg-white"
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                       />
                     </FormControl>
                     <FormMessage />
@@ -221,13 +221,13 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="contacts.email" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Email de Acesso</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Email de Acesso</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
                         placeholder="email@exemplo.com" 
                         {...field}
-                        className="bg-white"
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                       />
                     </FormControl>
                     <FormMessage />
@@ -236,19 +236,23 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
               </div>
 
               {/* Seção de Acesso */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Dados de Acesso</h3>
+              <div className="space-y-5">
+                <div className="pb-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-gray-600" />
+                    Dados de Acesso
+                  </h3>
                 </div>
                 
                 <FormField control={form.control} name="access.password" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Senha</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} className="bg-white" />
+                      <Input 
+                        type="password" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -256,9 +260,13 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="access.confirmPassword" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Confirmar Senha</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Confirmar Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} className="bg-white" />
+                      <Input 
+                        type="password" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -267,22 +275,22 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
             </div>
 
             {/* Coluna da Direita */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Seção Socioeconômica */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Dados Socioeconômicos</h3>
+              <div className="space-y-5">
+                <div className="pb-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-gray-600" />
+                    Dados Socioeconômicos
+                  </h3>
                 </div>
                 
                 <FormField control={form.control} name="socioeconomic.incomeRange" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Faixa de Renda</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Faixa de Renda</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger className="border-gray-300 focus:border-gray-900 focus:ring-gray-900">
                           <SelectValue placeholder="Selecione sua faixa de renda" />
                         </SelectTrigger>
                       </FormControl>
@@ -301,9 +309,15 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="socioeconomic.familySize" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Tamanho da Família</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700">Tamanho da Família</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" max="20" {...field} className="bg-white" />
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="20" 
+                          {...field} 
+                          className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -311,9 +325,15 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                   
                   <FormField control={form.control} name="socioeconomic.numberOfChildren" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Nº de Crianças</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700">Nº de Crianças</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" max="15" {...field} className="bg-white" />
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          max="15" 
+                          {...field} 
+                          className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -322,19 +342,23 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
               </div>
 
               {/* Seção de Endereço */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-orange-600 rounded-full flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Endereço</h3>
+              <div className="space-y-5">
+                <div className="pb-3 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-gray-600" />
+                    Endereço
+                  </h3>
                 </div>
                 
                 <FormField control={form.control} name="address.street" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Rua e Número</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Rua e Número</FormLabel>
                     <FormControl>
-                      <Input placeholder="Rua das Flores, 123" {...field} className="bg-white" />
+                      <Input 
+                        placeholder="Rua das Flores, 123" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -342,9 +366,13 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="address.neighborhood" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Bairro</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Bairro</FormLabel>
                     <FormControl>
-                      <Input placeholder="Centro" {...field} className="bg-white" />
+                      <Input 
+                        placeholder="Centro" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -353,9 +381,13 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="address.city" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Cidade</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700">Cidade</FormLabel>
                       <FormControl>
-                        <Input placeholder="São Paulo" {...field} className="bg-white" />
+                        <Input 
+                          placeholder="São Paulo" 
+                          {...field} 
+                          className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -363,10 +395,10 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                   
                   <FormField control={form.control} name="address.state" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Estado</FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700">Estado</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="bg-white">
+                          <SelectTrigger className="border-gray-300 focus:border-gray-900 focus:ring-gray-900">
                             <SelectValue placeholder="Estado" />
                           </SelectTrigger>
                         </FormControl>
@@ -385,9 +417,13 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="address.referencePoint" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Ponto de Referência (Opcional)</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Ponto de Referência (Opcional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Próximo ao mercado" {...field} className="bg-white" />
+                      <Input 
+                        placeholder="Próximo ao mercado" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -403,20 +439,20 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
             </Alert>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-6">
+          <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-gray-200">
             <Button 
               type="button" 
               variant="outline" 
               onClick={onCancel} 
               disabled={isLoading}
-              className="flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Cancelar
             </Button>
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+              className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-medium"
             >
               {isLoading ? (
                 <>

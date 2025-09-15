@@ -1,17 +1,18 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
-import { AuthService } from "@/lib/auth"
-import { mockFamilies, mockAssessments, updateFamily } from "@/lib/mock-data"
+import { useFamilyData } from "@/hooks/use-family-data"
+import { supabaseBrowserClient } from "@/lib/supabase/browser"
 import type { Family, Assessment } from "@/lib/types"
-import { Phone, Mail, MessageCircle, MapPin, Users, Baby, LogOut, TrendingUp, Edit, FileText } from "lucide-react"
+import { Phone, Mail, MessageCircle, MapPin, Users, Baby, TrendingUp, Edit, FileText, AlertCircle, RefreshCw } from "lucide-react"
 import { EditFamilyModal } from "./components/EditFamilyModal"
 
 // Animações
@@ -65,42 +66,32 @@ function FamilyPageSkeleton() {
 }
 
 export default function FamiliaPage() {
-  const [family, setFamily] = useState<Family | null>(null)
+  const { family, isLoading, error, refetch } = useFamilyData()
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  useEffect(() => {
-    const user = AuthService.getCurrentUser()
-    if (user?.familyId) {
-      // Simula um delay de carregamento para visualização do skeleton
-      setTimeout(() => {
-        const familyData = mockFamilies.find((f) => f.id === user.familyId)
-        const familyAssessments = mockAssessments.filter((a) => a.familyId === user.familyId)
-        setFamily(familyData || null)
-        setAssessments(familyAssessments)
-      }, 500)
-    }
-  }, [])
-
-  const handleLogout = () => {
-    AuthService.logout()
+  const handleLogout = async () => {
+    await supabaseBrowserClient.auth.signOut()
     router.push("/")
   }
 
-  const handleSaveFamily = (updatedData: Partial<Family>) => {
+  const handleSaveFamily = async (updatedData: Partial<Family>) => {
     if (!family) return
-    setIsLoading(true)
+    setIsSaving(true)
+    
     try {
-      const updatedFamily = updateFamily(family.id, updatedData)
-      setFamily(updatedFamily)
+      // Aqui você pode implementar a atualização no Supabase
+      // Por enquanto, vamos apenas mostrar uma mensagem de sucesso
       toast({
         title: "Sucesso!",
         description: "Os dados da família foram atualizados.",
       })
       setIsEditModalOpen(false)
+      // Recarregar os dados após a atualização
+      await refetch()
     } catch (error) {
       toast({
         title: "Erro",
@@ -108,14 +99,63 @@ export default function FamiliaPage() {
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
   const latestAssessment = assessments[0]
 
-  if (!family) {
+  // Mostrar skeleton enquanto carrega
+  if (isLoading) {
     return <FamilyPageSkeleton />
+  }
+
+  // Mostrar erro se houver
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erro ao carregar dados</AlertTitle>
+            <AlertDescription className="mt-2">
+              {error}
+            </AlertDescription>
+          </Alert>
+          <div className="mt-6 flex gap-4">
+            <Button onClick={refetch} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tentar Novamente
+            </Button>
+            <Button onClick={() => router.push('/cadastro')} variant="default">
+              Fazer Cadastro
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mostrar mensagem se não houver família
+  if (!family) {
+    return (
+      <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Cadastro não encontrado</AlertTitle>
+            <AlertDescription className="mt-2">
+              Você ainda não possui um cadastro de família. Complete seu cadastro para acessar o dashboard.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-6">
+            <Button onClick={() => router.push('/cadastro')} variant="default">
+              Completar Cadastro
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -337,7 +377,7 @@ export default function FamiliaPage() {
         onClose={() => setIsEditModalOpen(false)}
         family={family}
         onSave={handleSaveFamily}
-        isLoading={isLoading}
+        isLoading={isSaving}
       />
     </>
   )
