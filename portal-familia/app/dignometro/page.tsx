@@ -1,26 +1,26 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { AuthService } from "@/lib/auth"
-import { mockAssessments } from "@/lib/mock-data"
-import type { Assessment } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, CheckCircle } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { AuthService } from "@/lib/auth";
+import { mockAssessments } from "@/lib/mock-data";
+import type { Assessment } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 
 interface Question {
-  id: string
-  text: string
+  id: string;
+  text: string;
   options: {
-    value: string
-    label: string
-    score: number
-  }[]
+    value: string;
+    label: string;
+    score: number;
+  }[];
 }
 
 const questions: Question[] = [
@@ -28,10 +28,26 @@ const questions: Question[] = [
     id: "housing",
     text: "Como você avalia as condições da sua moradia?",
     options: [
-      { value: "excellent", label: "Excelente - Casa própria em bom estado", score: 10 },
-      { value: "good", label: "Boa - Casa própria com pequenos reparos necessários", score: 8 },
-      { value: "fair", label: "Regular - Casa alugada em bom estado", score: 6 },
-      { value: "poor", label: "Ruim - Moradia precária ou em área de risco", score: 3 },
+      {
+        value: "excellent",
+        label: "Excelente - Casa própria em bom estado",
+        score: 10,
+      },
+      {
+        value: "good",
+        label: "Boa - Casa própria com pequenos reparos necessários",
+        score: 8,
+      },
+      {
+        value: "fair",
+        label: "Regular - Casa alugada em bom estado",
+        score: 6,
+      },
+      {
+        value: "poor",
+        label: "Ruim - Moradia precária ou em área de risco",
+        score: 3,
+      },
       { value: "very-poor", label: "Muito ruim - Sem moradia fixa", score: 1 },
     ],
   },
@@ -39,11 +55,31 @@ const questions: Question[] = [
     id: "income",
     text: "Como você avalia a renda familiar mensal?",
     options: [
-      { value: "sufficient", label: "Suficiente para todas as necessidades e sobra", score: 10 },
-      { value: "adequate", label: "Adequada para as necessidades básicas", score: 8 },
-      { value: "tight", label: "Justa, às vezes falta para algumas coisas", score: 6 },
-      { value: "insufficient", label: "Insuficiente, frequentemente falta dinheiro", score: 3 },
-      { value: "very-insufficient", label: "Muito insuficiente, sempre em dificuldades", score: 1 },
+      {
+        value: "sufficient",
+        label: "Suficiente para todas as necessidades e sobra",
+        score: 10,
+      },
+      {
+        value: "adequate",
+        label: "Adequada para as necessidades básicas",
+        score: 8,
+      },
+      {
+        value: "tight",
+        label: "Justa, às vezes falta para algumas coisas",
+        score: 6,
+      },
+      {
+        value: "insufficient",
+        label: "Insuficiente, frequentemente falta dinheiro",
+        score: 3,
+      },
+      {
+        value: "very-insufficient",
+        label: "Muito insuficiente, sempre em dificuldades",
+        score: 1,
+      },
     ],
   },
   {
@@ -61,127 +97,178 @@ const questions: Question[] = [
     id: "health",
     text: "Como você avalia o acesso da família aos serviços de saúde?",
     options: [
-      { value: "excellent", label: "Excelente - Plano de saúde privado", score: 10 },
+      {
+        value: "excellent",
+        label: "Excelente - Plano de saúde privado",
+        score: 10,
+      },
       { value: "good", label: "Bom - SUS com acesso fácil", score: 8 },
-      { value: "fair", label: "Regular - SUS com algumas dificuldades", score: 6 },
-      { value: "poor", label: "Ruim - Dificuldades frequentes de acesso", score: 3 },
-      { value: "very-poor", label: "Muito ruim - Sem acesso adequado", score: 1 },
+      {
+        value: "fair",
+        label: "Regular - SUS com algumas dificuldades",
+        score: 6,
+      },
+      {
+        value: "poor",
+        label: "Ruim - Dificuldades frequentes de acesso",
+        score: 3,
+      },
+      {
+        value: "very-poor",
+        label: "Muito ruim - Sem acesso adequado",
+        score: 1,
+      },
     ],
   },
   {
     id: "food",
     text: "Como está a segurança alimentar da sua família?",
     options: [
-      { value: "secure", label: "Sempre temos comida suficiente e variada", score: 10 },
-      { value: "mild-insecurity", label: "Às vezes falta variedade na alimentação", score: 8 },
-      { value: "moderate-insecurity", label: "Frequentemente falta comida", score: 6 },
-      { value: "severe-insecurity", label: "Muitas vezes passamos fome", score: 3 },
-      { value: "very-severe", label: "Constantemente em insegurança alimentar", score: 1 },
+      {
+        value: "secure",
+        label: "Sempre temos comida suficiente e variada",
+        score: 10,
+      },
+      {
+        value: "mild-insecurity",
+        label: "Às vezes falta variedade na alimentação",
+        score: 8,
+      },
+      {
+        value: "moderate-insecurity",
+        label: "Frequentemente falta comida",
+        score: 6,
+      },
+      {
+        value: "severe-insecurity",
+        label: "Muitas vezes passamos fome",
+        score: 3,
+      },
+      {
+        value: "very-severe",
+        label: "Constantemente em insegurança alimentar",
+        score: 1,
+      },
     ],
   },
-]
+];
 
 export default function DignometroPage() {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [finalScore, setFinalScore] = useState(0)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   const handleAnswer = (questionId: string, value: string) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
-    }))
-  }
+    }));
+  };
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
+      setCurrentQuestion(currentQuestion + 1);
     } else {
-      handleSubmit()
+      handleSubmit();
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1)
+      setCurrentQuestion(currentQuestion - 1);
     }
-  }
+  };
 
   const calculateScore = () => {
-    let totalScore = 0
-    let answeredQuestions = 0
+    let totalScore = 0;
+    let answeredQuestions = 0;
 
     questions.forEach((question) => {
-      const answer = answers[question.id]
+      const answer = answers[question.id];
       if (answer) {
-        const option = question.options.find((opt) => opt.value === answer)
+        const option = question.options.find((opt) => opt.value === answer);
         if (option) {
-          totalScore += option.score
-          answeredQuestions++
+          totalScore += option.score;
+          answeredQuestions++;
         }
       }
-    })
+    });
 
-    return answeredQuestions > 0 ? Math.round((totalScore / answeredQuestions) * 10) / 10 : 0
-  }
+    return answeredQuestions > 0
+      ? Math.round((totalScore / answeredQuestions) * 10) / 10
+      : 0;
+  };
 
   const getPovertyLevel = (score: number): "Baixo" | "Médio" | "Alto" => {
-    if (score >= 7) return "Baixo"
-    if (score >= 4) return "Médio"
-    return "Alto"
-  }
+    if (score >= 7) return "Baixo";
+    if (score >= 4) return "Médio";
+    return "Alto";
+  };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      const score = calculateScore()
-      const povertyLevel = getPovertyLevel(score)
+      const score = calculateScore();
+      const povertyLevel = getPovertyLevel(score);
+      const user = AuthService.getCurrentUser();
 
-      // Simulate API call to save assessment
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const user = AuthService.getCurrentUser()
-      if (user?.familyId) {
-        const newAssessment: Assessment = {
-          id: `assess${Date.now()}`,
-          familyId: user.familyId,
-          date: new Date(),
-          score,
-          povertyLevel,
-        }
-
-        // Add to mock data (in a real app, this would be saved to database)
-        mockAssessments.unshift(newAssessment)
+      if (!user?.familyId) {
+        toast({
+          title: "Erro",
+          description: "Família não encontrada no usuário logado.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
       }
 
-      setFinalScore(score)
-      setIsCompleted(true)
+      const payload = {
+        family_id: user.familyId,
+        answers,
+        poverty_score: score,
+        poverty_level: povertyLevel,
+        assessment_date: new Date().toISOString(),
+      };
+
+      const response = await fetch(
+        "https://alexandrec.app.n8n.cloud/webhook-test/ef8517cd-d947-4b94-b5e5-e3460907bdb6",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Erro ao salvar avaliação");
+
+      setFinalScore(score);
+      setIsCompleted(true);
 
       toast({
         title: "Avaliação concluída!",
         description: `Seu score foi ${score}/10 - Nível de pobreza: ${povertyLevel}`,
-      })
+      });
     } catch (error) {
       toast({
         title: "Erro ao salvar avaliação",
         description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const currentQuestionData = questions[currentQuestion]
-  const currentAnswer = answers[currentQuestionData?.id]
-  const canProceed = currentAnswer !== undefined
+  const currentQuestionData = questions[currentQuestion];
+  const currentAnswer = answers[currentQuestionData?.id];
+  const canProceed = currentAnswer !== undefined;
 
   if (isCompleted) {
     return (
@@ -195,7 +282,9 @@ export default function DignometroPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2">{finalScore}</div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">
+                {finalScore}
+              </div>
               <div className="text-lg text-gray-600">/ 10</div>
               <div className="mt-4">
                 <span
@@ -203,28 +292,35 @@ export default function DignometroPage() {
                     getPovertyLevel(finalScore) === "Baixo"
                       ? "bg-blue-100 text-blue-800"
                       : getPovertyLevel(finalScore) === "Médio"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
                   }`}
                 >
                   Nível de Pobreza: {getPovertyLevel(finalScore)}
                 </span>
               </div>
             </div>
-            <Button onClick={() => router.push("/familia")} className="w-full bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={() => router.push("/familia")}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
               Voltar ao Perfil
             </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push("/familia")} className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/familia")}
+            className="mb-4"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
@@ -239,18 +335,28 @@ export default function DignometroPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{currentQuestionData.text}</CardTitle>
+            <CardTitle className="text-lg">
+              {currentQuestionData.text}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup
               value={currentAnswer || ""}
-              onValueChange={(value) => handleAnswer(currentQuestionData.id, value)}
+              onValueChange={(value) =>
+                handleAnswer(currentQuestionData.id, value)
+              }
             >
               <div className="space-y-3">
                 {currentQuestionData.options.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50">
+                  <div
+                    key={option.value}
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50"
+                  >
                     <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="flex-1 cursor-pointer">
+                    <Label
+                      htmlFor={option.value}
+                      className="flex-1 cursor-pointer"
+                    >
                       {option.label}
                     </Label>
                   </div>
@@ -261,7 +367,11 @@ export default function DignometroPage() {
         </Card>
 
         <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={handlePrevious} disabled={currentQuestion === 0}>
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentQuestion === 0}
+          >
             Anterior
           </Button>
           <Button
@@ -272,11 +382,11 @@ export default function DignometroPage() {
             {isSubmitting
               ? "Salvando..."
               : currentQuestion === questions.length - 1
-                ? "Finalizar Avaliação"
-                : "Próxima"}
+              ? "Finalizar Avaliação"
+              : "Próxima"}
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import type { IncomeRange, BrazilianState } from "@/lib/types"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import type { IncomeRange, BrazilianState } from "@/lib/types";
 
 const incomeRanges: IncomeRange[] = [
   "Até R$ 500",
@@ -19,7 +25,7 @@ const incomeRanges: IncomeRange[] = [
   "R$ 1.501 - R$ 2.000",
   "R$ 2.001 - R$ 3.000",
   "Acima de R$ 3.000",
-]
+];
 
 const brazilianStates: BrazilianState[] = [
   "AC",
@@ -49,7 +55,7 @@ const brazilianStates: BrazilianState[] = [
   "SP",
   "SE",
   "TO",
-]
+];
 
 export default function CadastroPage() {
   const [formData, setFormData] = useState({
@@ -67,22 +73,22 @@ export default function CadastroPage() {
     city: "",
     state: "" as BrazilianState | "",
     referencePoint: "",
-  })
+  });
 
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     // Validate required fields
     const requiredFields = [
@@ -95,53 +101,67 @@ export default function CadastroPage() {
       "neighborhood",
       "city",
       "state",
-    ]
+    ];
 
-    const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
+    const missingFields = requiredFields.filter(
+      (field) => !formData[field as keyof typeof formData]
+    );
 
     if (missingFields.length > 0) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
-      })
-      setIsLoading(false)
-      return
+      });
+      setIsLoading(false);
+      return;
     }
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const response = await fetch(
+        "https://alexandrec.app.n8n.cloud/webhook-test/d538a0b0-2d0c-4872-9a4f-7354d1640b12",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      if (!response.ok) throw new Error("Erro ao cadastrar família");
 
       toast({
         title: "Família cadastrada com sucesso!",
         description: "Redirecionando para a página de login...",
-      })
+      });
 
       setTimeout(() => {
-        router.push("/")
-      }, 2000)
+        router.push("/");
+      }, 2000);
     } catch (error) {
       toast({
         title: "Erro no cadastro",
         description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleCancel = () => {
-    router.push("/")
-  }
+    router.push("/");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cadastrar Família</h1>
-          <p className="text-gray-600">Informe contatos, dados socioeconômicos e endereço.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Cadastrar Família
+          </h1>
+          <p className="text-gray-600">
+            Informe contatos, dados socioeconômicos e endereço.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -168,7 +188,9 @@ export default function CadastroPage() {
                     id="whatsapp"
                     placeholder="(XX) XXXX-XXXX"
                     value={formData.whatsapp}
-                    onChange={(e) => handleInputChange("whatsapp", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("whatsapp", e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -195,7 +217,9 @@ export default function CadastroPage() {
                   <Label htmlFor="incomeRange">Faixa de Renda</Label>
                   <Select
                     value={formData.incomeRange}
-                    onValueChange={(value) => handleInputChange("incomeRange", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("incomeRange", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a faixa de renda" />
@@ -217,7 +241,9 @@ export default function CadastroPage() {
                     min="1"
                     placeholder="Informe o tamanho da família"
                     value={formData.familySize}
-                    onChange={(e) => handleInputChange("familySize", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("familySize", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -229,7 +255,9 @@ export default function CadastroPage() {
                     min="0"
                     placeholder="Informe o número de filhos"
                     value={formData.numberOfChildren}
-                    onChange={(e) => handleInputChange("numberOfChildren", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("numberOfChildren", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -248,7 +276,9 @@ export default function CadastroPage() {
                     id="street"
                     placeholder="Informe a rua"
                     value={formData.street}
-                    onChange={(e) => handleInputChange("street", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("street", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -258,7 +288,9 @@ export default function CadastroPage() {
                     id="neighborhood"
                     placeholder="Informe o bairro"
                     value={formData.neighborhood}
-                    onChange={(e) => handleInputChange("neighborhood", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("neighborhood", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -269,13 +301,20 @@ export default function CadastroPage() {
                       id="city"
                       placeholder="Informe a cidade"
                       value={formData.city}
-                      onChange={(e) => handleInputChange("city", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("city", e.target.value)
+                      }
                       required
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state">Estado</Label>
-                    <Select value={formData.state} onValueChange={(value) => handleInputChange("state", value)}>
+                    <Select
+                      value={formData.state}
+                      onValueChange={(value) =>
+                        handleInputChange("state", value)
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="UF" />
                       </SelectTrigger>
@@ -295,7 +334,9 @@ export default function CadastroPage() {
                     id="referencePoint"
                     placeholder="Informe um ponto de referência"
                     value={formData.referencePoint}
-                    onChange={(e) => handleInputChange("referencePoint", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("referencePoint", e.target.value)
+                    }
                   />
                 </div>
               </CardContent>
@@ -304,15 +345,24 @@ export default function CadastroPage() {
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoading}
+            >
               Cancelar
             </Button>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="bg-purple-600 hover:bg-purple-700"
+              disabled={isLoading}
+            >
               {isLoading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
