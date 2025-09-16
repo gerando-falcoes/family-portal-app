@@ -36,8 +36,13 @@ export function useFamilyData(): UseFamilyDataReturn {
         return;
       }
 
-      // Buscar dados da família
-      const response = await fetch('/api/familia/get');
+      // Buscar dados da família com token de autenticação
+      const response = await fetch('/api/familia/get', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
         if (response.status === 404) {

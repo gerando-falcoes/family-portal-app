@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServerClient } from '@/lib/supabase/server';
-import type { FamilyDashboardInfo } from '@/lib/types';
+import type { FamilyOverview, DiagnoseAssessment } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,125 +29,73 @@ export async function GET(request: NextRequest) {
       userEmail = user.email;
     }
 
-    // Primeiro, buscar o family_id usando a tabela families
-    const { data: familyData, error: familyError } = await supabaseServerClient
-      .from('families')
-      .select('id')
+    // Buscar dados da family_overview usando o email
+    const { data: overviewData, error: overviewError } = await supabaseServerClient
+      .from('family_overview')
+      .select('*')
       .eq('email', userEmail)
       .single();
 
-    if (familyError) {
-      if (familyError.code === 'PGRST116') {
+    if (overviewError) {
+      if (overviewError.code === 'PGRST116') {
         // Nenhum registro encontrado
         return NextResponse.json({ error: 'Família não encontrada' }, { status: 404 });
       }
-      console.error('Erro ao buscar família:', familyError);
+      console.error('Erro ao buscar dados da família:', overviewError);
       return NextResponse.json({ error: 'Erro ao buscar dados da família' }, { status: 500 });
     }
 
-    // Buscar dados organizados da família
-    const { data: familyInfo, error: familyInfoError } = await supabaseServerClient
-      .from('families')
-      .select('*')
-      .eq('id', familyData.id)
-      .single();
-
-    if (familyInfoError) {
-      console.error('Erro ao buscar informações da família:', familyInfoError);
-      return NextResponse.json({ error: 'Erro ao buscar dados da família' }, { status: 500 });
-    }
-
-    // Buscar avaliações
-    const { data: assessments, error: assessmentsError } = await supabaseServerClient
+    // Buscar histórico completo de avaliações
+    const { data: assessmentHistory, error: historyError } = await supabaseServerClient
       .from('dignometro_assessments')
       .select('*')
-      .eq('family_id', familyData.id)
+      .eq('family_id', overviewData.family_id)
       .order('assessment_date', { ascending: false })
       .order('created_at', { ascending: false });
 
+    // Organizar dados na estrutura esperada
+    const familyOverview = overviewData as FamilyOverview;
+
     const dashboardData = [{
-      family_id: familyInfo.id,
-      family_name: familyInfo.name,
+      family_id: familyOverview.family_id,
+      family_name: familyOverview.family_name,
       contacts: {
-        phone: familyInfo.phone,
-        whatsapp: familyInfo.whatsapp,
-        email: familyInfo.email
+        phone: familyOverview.phone,
+        whatsapp: familyOverview.whatsapp,
+        email: familyOverview.email
       },
       socioeconomic_data: {
-        income_range: familyInfo.income_range,
-        family_size: familyInfo.family_size,
-        children_count: familyInfo.children_count
+        income_range: familyOverview.income_range,
+        family_size: familyOverview.family_size,
+        children_count: familyOverview.children_count
       },
       address: {
-        street: familyInfo.street,
-        neighborhood: familyInfo.neighborhood,
-        city: familyInfo.city,
-        state: familyInfo.state,
-        reference_point: familyInfo.reference_point
+        street: familyOverview.street,
+        neighborhood: familyOverview.neighborhood,
+        city: familyOverview.city,
+        state: familyOverview.state,
+        reference_point: familyOverview.reference_point
       },
-      latest_assessment: assessments && assessments.length > 0 ? {
-        assessment_id: assessments[0].id,
-        poverty_score: assessments[0].poverty_score,
-        poverty_level: assessments[0].poverty_level,
-        assessment_date: assessments[0].assessment_date,
-        dimension_scores: assessments[0].dimension_scores,
-        answers: assessments[0].answers,
-        created_at: assessments[0].created_at
+      latest_assessment: familyOverview.current_poverty_score ? {
+        assessment_id: familyOverview.latest_assessment_id || '',
+        poverty_score: familyOverview.current_poverty_score,
+        poverty_level: familyOverview.current_poverty_level || '',
+        assessment_date: familyOverview.latest_assessment_date || '',
+        dimension_scores: familyOverview.current_dimension_scores,
+        answers: null,
+        created_at: familyOverview.latest_assessment_date || ''
       } : null,
-      assessment_history: assessments || [],
-      status: familyInfo.status,
-      mentor_email: familyInfo.mentor_email,
-      created_at: familyInfo.created_at,
-      updated_at: familyInfo.updated_at
+      assessment_history: assessmentHistory || [],
+      status: familyOverview.family_status,
+      mentor_email: familyOverview.mentor_email,
+      created_at: familyOverview.family_created_at || '',
+      updated_at: familyOverview.family_updated_at || ''
     }];
 
     const dashboardError = null;
 
-    if (dashboardError) {
-      console.error('Erro ao buscar dashboard da família:', dashboardError);
-      
-      // Fallback: buscar dados básicos da família
-      const { data: basicFamilyData, error: basicError } = await supabaseServerClient
-        .from('families')
-        .select('*')
-        .eq('email', userEmail)
-        .single();
-
-      if (basicError) {
-        return NextResponse.json({ error: 'Erro ao buscar dados da família' }, { status: 500 });
-      }
-
-      // Retornar dados básicos formatados
-      const basicFamily = {
-        id: basicFamilyData.id,
-        name: basicFamilyData.name || 'Família',
-        status: basicFamilyData.status === 'ativo' ? 'Ativa' : (basicFamilyData.status || 'Ativa'),
-        contacts: {
-          phone: basicFamilyData.phone || '',
-          whatsapp: basicFamilyData.whatsapp || '',
-          email: basicFamilyData.email || userEmail,
-        },
-        socioeconomic: {
-          incomeRange: basicFamilyData.income_range || '',
-          familySize: basicFamilyData.family_size || 1,
-          numberOfChildren: basicFamilyData.children_count || 0,
-        },
-        address: {
-          street: basicFamilyData.street || '',
-          neighborhood: basicFamilyData.neighborhood || '',
-          city: basicFamilyData.city || '',
-          state: basicFamilyData.state || '',
-          referencePoint: basicFamilyData.reference_point || '',
-        },
-        createdAt: new Date(basicFamilyData.created_at),
-        updatedAt: new Date(basicFamilyData.updated_at || basicFamilyData.created_at),
-      };
-
-      return NextResponse.json({ family: basicFamily, isDashboard: false });
-    }
-
-    // Se temos dados do dashboard, retornar formatados
-    const dashboardInfo = dashboardData[0] as FamilyDashboardInfo;
+    // Dados do dashboard organizados
+    const dashboardInfo = dashboardData[0];
     
     const family = {
       id: dashboardInfo.family_id,
@@ -178,7 +126,7 @@ export async function GET(request: NextRequest) {
       family, 
       isDashboard: true,
       latestAssessment: dashboardInfo.latest_assessment,
-      assessmentHistory: dashboardInfo.assessment_history
+      assessmentHistory: assessmentHistory || []
     });
 
   } catch (error) {
