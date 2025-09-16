@@ -52,12 +52,3 @@ export const mockAssessments: Assessment[] = [
     povertyLevel: "Médio",
   },
 ]
-
-// Função para atualizar os dados da família (adicionada na Fase 2)
-export const updateFamily = (familyId: string, updatedData: Partial<Family>) => {
-  const index = mockFamilies.findIndex(f => f.id === familyId);
-  if (index !== -1) {
-    mockFamilies[index] = { ...mockFamilies[index], ...updatedData, updatedAt: new Date() };
-  }
-  return mockFamilies[index];
-};

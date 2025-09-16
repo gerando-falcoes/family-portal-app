@@ -24,31 +24,20 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // TEMPORÁRIO: Aceita qualquer login e sempre redireciona
-      // Para reverter: use o código original abaixo
-      const user = await AuthService.login(email || "temp@example.com", password || "temp")
-      
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o dashboard...",
-      })
-      router.push("/familia")
-
-      // Código original (comentado):
-      // const user = await AuthService.login(email, password)
-      // if (user) {
-      //   toast({
-      //     title: "Login realizado com sucesso!",
-      //     description: "Redirecionando para o dashboard...",
-      //   })
-      //   router.push("/familia")
-      // } else {
-      //   toast({
-      //     title: "Erro no login",
-      //     description: "Email ou senha incorretos.",
-      //     variant: "destructive",
-      //   })
-      // }
+      const user = await AuthService.login(email, password)
+      if (user) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o dashboard...",
+        })
+        router.push("/dashboard")
+      } else {
+        toast({
+          title: "Erro no login",
+          description: "Email ou senha incorretos.",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
       toast({
         title: "Erro no login",
@@ -61,18 +50,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-            <Lock className="w-6 h-6 text-primary" />
+          <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+            <Lock className="w-6 h-6 text-purple-600" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Entrar no Portal da Família</h1>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-sm text-yellow-800">
-              <strong>Temporário:</strong> Sistema de autenticação desabilitado. Qualquer email/senha funcionará.
-            </p>
-          </div>
+          <h1 className="text-2xl font-semibold text-gray-900">Entrar no Portal da Família</h1>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -98,14 +82,14 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
           <div className="mt-6 text-center space-y-2">
             <button
               type="button"
-              className="text-sm text-muted-foreground hover:text-foreground"
+              className="text-sm text-gray-600 hover:text-gray-800"
               onClick={() => toast({ title: "Funcionalidade em desenvolvimento" })}
             >
               Esqueci minha senha
@@ -113,7 +97,7 @@ export default function LoginPage() {
             <div>
               <button
                 type="button"
-                className="text-sm text-primary hover:text-primary/90"
+                className="text-sm text-purple-600 hover:text-purple-800"
                 onClick={() => router.push("/cadastro")}
               >
                 Cadastrar

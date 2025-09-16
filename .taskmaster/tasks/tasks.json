@@ -1,0 +1,99 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Remover pasta duplicada portal-familia/ após migração concluída",
+        "description": "Excluir a pasta portal-familia/ após migrar e validar todas as funcionalidades para a raiz.",
+        "details": "- Confirmar migração concluída\n- Confirmar build OK\n- Excluir diretório portal-familia/\n- Ajustar .gitignore se necessário",
+        "testStrategy": "- Rodar build e testes manuais\n- Verificar ausência de imports para portal-familia/",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Mapear e decidir conflitos entre raiz e portal-familia/",
+        "description": "Listar arquivos duplicados e decidir fonte de verdade por área (app, components, hooks, lib).",
+        "details": "- Gerar diff entre pastas\n- Decidir por critério: mais recente/mais completo\n- Documentar decisões",
+        "testStrategy": "- Validar que cada arquivo referenciado tem apenas 1 cópia após migração",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Migrar app/ da pasta portal-familia/ para raiz",
+        "description": "Mover páginas (dashboard, familia, dignometro, cadastro) e ajustar imports/rotas.",
+        "details": "- Copiar arquivos preservando estrutura\n- Ajustar imports absolutos/relativos\n- Testar rotas\n- Remover duplicados antigos",
+        "testStrategy": "- Acessar /familia, /dignometro, /cadastro",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Migrar components/ e components/ui da pasta portal-familia/ para raiz",
+        "description": "Unificar biblioteca de componentes e remover duplicidades.",
+        "details": "- Mapear componentes equivalentes\n- Manter variações mais usadas\n- Ajustar imports em todo o app",
+        "testStrategy": "- Rodar build e verificar import paths",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Migrar hooks/ e lib/ da pasta portal-familia/ para raiz",
+        "description": "Unificar hooks e libs e remover duplicidades.",
+        "details": "- Consolidar hooks use-toast/use-mobile\n- Unificar lib/auth, types, utils\n- Remover mocks desnecessários",
+        "testStrategy": "- Verificar compila e autenticação funcionam",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Ajustar imports após migração",
+        "description": "Atualizar caminhos de import para refletir estrutura unificada.",
+        "details": "- Buscar por 'from \"@portal-familia\"' e relativos quebrados\n- Atualizar caminhos para raiz\n- Rodar TS para checar erros",
+        "testStrategy": "- tsc --noEmit ou build sem erros",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Remover pasta portal-familia/ com segurança",
+        "description": "Excluir pasta após validações e backups.",
+        "details": "- Criar backup (zip opcional)\n- Excluir pasta\n- Verificar .gitignore\n- Conferir que não há referências restantes",
+        "testStrategy": "- Grep por 'portal-familia/' no repo",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Validação final: build/dev e testes manuais",
+        "description": "Garantir que o sistema roda após migração e remoção da pasta duplicada.",
+        "details": "- npm run build\n- npm run dev\n- Validar rotas principais e flows\n- Corrigir regressões",
+        "testStrategy": "- Checklists por rota",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-09-16T13:37:09.440Z",
+      "description": "Default tasks context",
+      "updated": "2025-09-16T13:38:41.402Z"
+    }
+  }
+}

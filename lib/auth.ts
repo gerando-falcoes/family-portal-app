@@ -1,58 +1,38 @@
-import { supabaseBrowserClient } from '@/lib/supabase/browser'
-import type { User } from './types'
-import { useState, useEffect } from 'react';
+import { mockUsers } from "./mock-data"
+import type { User } from "./types"
 
 export class AuthService {
-  private static supabase = supabaseBrowserClient
+  private static currentUser: User | null = null
 
-  static async login(email: string, password: string): Promise<any | null> {
-    const { data, error } = await this.supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      console.error('Error logging in:', error)
-      return null
+  static async login(email: string, password: string): Promise<User | null> {
+    const user = mockUsers.find((u) => u.email === email && u.password === password)
+    if (user) {
+      this.currentUser = user
+      localStorage.setItem("currentUser", JSON.stringify(user))
+      return user
     }
-    return data.user
+    return null
   }
 
-  static async logout(): Promise<void> {
-    const { error } = await this.supabase.auth.signOut()
-    if (error) {
-      console.error('Error logging out:', error)
+  static logout(): void {
+    this.currentUser = null
+    localStorage.removeItem("currentUser")
+  }
+
+  static getCurrentUser(): User | null {
+    if (this.currentUser) return this.currentUser
+
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("currentUser")
+      if (stored) {
+        this.currentUser = JSON.parse(stored)
+        return this.currentUser
+      }
     }
+    return null
   }
 
-  static async getCurrentUser(): Promise<any | null> {
-    const { data } = await this.supabase.auth.getUser()
-    return data.user
+  static isAuthenticated(): boolean {
+    return this.getCurrentUser() !== null
   }
-
-  static async isAuthenticated(): Promise<boolean> {
-    const user = await this.getCurrentUser()
-    return user !== null
-  }
-}
-
-export function useAuth() {
-  const [user, setUser] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const currentUser = await AuthService.getCurrentUser();
-      setUser(currentUser);
-      setLoading(false);
-    };
-
-    getUser();
-
-    const { data: authListener } = supabaseBrowserClient.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  return { user, loading };
 }
