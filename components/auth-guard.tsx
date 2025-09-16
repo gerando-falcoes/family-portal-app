@@ -16,8 +16,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = AuthService.isAuthenticated()
+    const checkAuth = async () => {
+      const authenticated = await AuthService.isAuthenticated()
       setIsAuthenticated(authenticated)
 
       if (!authenticated) {
