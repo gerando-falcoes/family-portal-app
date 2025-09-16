@@ -103,21 +103,21 @@ export default function FamiliaPage() {
                 <Phone className="w-4 h-4 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-600">Telefone</p>
-                  <p className="font-medium">{family.contacts.phone}</p>
+                  <p className="font-medium">{family.contacts.phone || 'Não informado'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <MessageCircle className="w-4 h-4 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-600">WhatsApp</p>
-                  <p className="font-medium">{family.contacts.whatsapp}</p>
+                  <p className="font-medium">{family.contacts.whatsapp || 'Não informado'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-600">Email</p>
-                  <p className="font-medium">{family.contacts.email}</p>
+                  <p className="font-medium">{family.contacts.email || 'Não informado'}</p>
                 </div>
               </div>
             </CardContent>
@@ -131,20 +131,20 @@ export default function FamiliaPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600">Faixa de Renda</p>
-                <p className="font-medium">{family.socioeconomic.incomeRange}</p>
+                <p className="font-medium">{family.socioeconomic.incomeRange || 'Não informado'}</p>
               </div>
               <div className="flex items-center gap-3">
                 <Users className="w-4 h-4 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-600">Tamanho da Família</p>
-                  <p className="font-medium">{family.socioeconomic.familySize} pessoas</p>
+                  <p className="font-medium">{family.socioeconomic.familySize || 0} pessoas</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Baby className="w-4 h-4 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-600">Nº de Crianças</p>
-                  <p className="font-medium">{family.socioeconomic.numberOfChildren}</p>
+                  <p className="font-medium">{family.socioeconomic.numberOfChildren || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -159,12 +159,12 @@ export default function FamiliaPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="font-medium">{family.address.street}</p>
-              <p className="text-gray-600">Bairro: {family.address.neighborhood}</p>
+              <p className="font-medium">{family.address.street || 'Endereço não informado'}</p>
+              <p className="text-gray-600">Bairro: {family.address.neighborhood || 'Não informado'}</p>
               <p className="text-gray-600">
-                Cidade/UF: {family.address.city}, {family.address.state}
+                Cidade/UF: {family.address.city || 'Não informado'}, {family.address.state || 'Não informado'}
               </p>
-              <p className="text-gray-600">Ponto de referência: {family.address.referencePoint}</p>
+              <p className="text-gray-600">Ponto de referência: {family.address.referencePoint || 'Não informado'}</p>
             </CardContent>
           </Card>
         </div>

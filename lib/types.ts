@@ -77,6 +77,48 @@ export interface FamilyDashboardInfo {
   updated_at: string
 }
 
+export interface FamilyOverview {
+  family_id: string
+  family_name: string
+  phone: string | null
+  whatsapp: string | null
+  email: string | null
+  family_size: number | null
+  children_count: number | null
+  family_status: string | null
+  income_range: string | null
+  street: string | null
+  neighborhood: string | null
+  city: string | null
+  state: string | null
+  reference_point: string | null
+  full_address: string | null
+  mentor_email: string | null
+  mentor_name: string | null
+  mentor_phone: string | null
+  mentor_role: string | null
+  latest_assessment_id: string | null
+  current_poverty_score: number | null
+  current_poverty_level: string | null
+  current_dimension_scores: any
+  latest_assessment_date: string | null
+  total_assessments: number | null
+  first_assessment_date: string | null
+  last_assessment_date: string | null
+  total_goals: number | null
+  active_goals: number | null
+  completed_goals: number | null
+  suggested_goals: number | null
+  avg_goal_progress: number | null
+  assessment_status: string | null
+  dignity_classification: string | null
+  family_created_at: string | null
+  family_updated_at: string | null
+  has_active_mentor: boolean | null
+  has_active_goals: boolean | null
+  days_since_last_assessment: number | null
+}
+
 export type IncomeRange =
   | "Até R$ 500"
   | "R$ 501 - R$ 1.000"
