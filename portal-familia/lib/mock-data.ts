@@ -1,17 +1,17 @@
-import type { User, Family, Assessment } from "./types"
+import type { User, Family, Assessment } from "./types";
 
 export const mockUsers: User[] = [
   {
     id: "user1",
     email: "joao.souza@example.com",
     password: "123456",
-    familyId: "FAM001",
+    familyId: "e2da494a-4fbd-45ae-be4b-d01f0e69712d",
   },
-]
+];
 
 export const mockFamilies: Family[] = [
   {
-    id: "FAM001",
+    id: "e2da494a-4fbd-45ae-be4b-d01f0e69712d",
     name: "Família Souza",
     status: "Ativa",
     contacts: {
@@ -34,21 +34,21 @@ export const mockFamilies: Family[] = [
     createdAt: new Date("2024-01-15"),
     updatedAt: new Date("2024-07-25"),
   },
-]
+];
 
 export const mockAssessments: Assessment[] = [
   {
     id: "assess1",
-    familyId: "FAM001",
+    familyId: "e2da494a-4fbd-45ae-be4b-d01f0e69712d",
     date: new Date("2024-07-25"),
     score: 8.5,
     povertyLevel: "Baixo",
   },
   {
     id: "assess2",
-    familyId: "FAM001",
+    familyId: "e2da494a-4fbd-45ae-be4b-d01f0e69712d",
     date: new Date("2024-01-15"),
     score: 6.8,
     povertyLevel: "Médio",
   },
-]
+];
