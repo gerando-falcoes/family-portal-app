@@ -39,6 +39,44 @@ export interface Assessment {
   details?: string
 }
 
+export interface DiagnoseAssessment {
+  assessment_id: string
+  poverty_score: number
+  poverty_level: string
+  assessment_date: string
+  dimension_scores: any
+  answers: any
+  created_at: string
+}
+
+export interface FamilyDashboardInfo {
+  family_id: string
+  family_name: string
+  contacts: {
+    phone: string | null
+    whatsapp: string | null
+    email: string | null
+  }
+  socioeconomic_data: {
+    income_range: string | null
+    family_size: number | null
+    children_count: number | null
+  }
+  address: {
+    street: string | null
+    neighborhood: string | null
+    city: string | null
+    state: string | null
+    reference_point: string | null
+  }
+  latest_assessment: DiagnoseAssessment | null
+  assessment_history: DiagnoseAssessment[]
+  status: string | null
+  mentor_email: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type IncomeRange =
   | "Até R$ 500"
   | "R$ 501 - R$ 1.000"

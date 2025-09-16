@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowserClient } from '@/lib/supabase/browser';
-import type { Family } from '@/lib/types';
+import type { Family, DiagnoseAssessment } from '@/lib/types';
 
 interface UseFamilyDataReturn {
   family: Family | null;
+  latestAssessment: DiagnoseAssessment | null;
+  assessmentHistory: DiagnoseAssessment[];
+  isDashboard: boolean;
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -12,6 +15,9 @@ interface UseFamilyDataReturn {
 
 export function useFamilyData(): UseFamilyDataReturn {
   const [family, setFamily] = useState<Family | null>(null);
+  const [latestAssessment, setLatestAssessment] = useState<DiagnoseAssessment | null>(null);
+  const [assessmentHistory, setAssessmentHistory] = useState<DiagnoseAssessment[]>([]);
+  const [isDashboard, setIsDashboard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -47,6 +53,9 @@ export function useFamilyData(): UseFamilyDataReturn {
 
       const data = await response.json();
       setFamily(data.family);
+      setLatestAssessment(data.latestAssessment || null);
+      setAssessmentHistory(data.assessmentHistory || []);
+      setIsDashboard(data.isDashboard || false);
 
     } catch (err) {
       console.error('Erro ao buscar dados da família:', err);
@@ -66,6 +75,9 @@ export function useFamilyData(): UseFamilyDataReturn {
 
   return {
     family,
+    latestAssessment,
+    assessmentHistory,
+    isDashboard,
     isLoading,
     error,
     refetch,
