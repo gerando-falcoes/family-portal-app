@@ -19,9 +19,15 @@ export default function FamiliaPage() {
 
   const formatPovertyLevel = (level: string) => {
     const levels: { [key: string]: string } = {
-      'baixo': 'Baixo',
-      'medio': 'Médio', 
-      'alto': 'Alto'
+      'pobreza extrema': 'Pobreza Extrema',
+      'pobreza': 'Pobreza',
+      'dignidade': 'Dignidade',
+      'prosperidade em desenvolvimento': 'Prosperidade em Desenvolvimento',
+      'quebra de ciclo da pobreza': 'Quebra de Ciclo da Pobreza',
+      // Manter compatibilidade com dados antigos
+      'alto': 'Pobreza Extrema',
+      'medio': 'Dignidade', 
+      'baixo': 'Prosperidade em Desenvolvimento'
     }
     return levels[level?.toLowerCase()] || level
   }
@@ -29,11 +35,15 @@ export default function FamiliaPage() {
   const getPovertyLevelColor = (level: string) => {
     const formattedLevel = formatPovertyLevel(level)
     switch (formattedLevel) {
-      case 'Baixo':
+      case 'Quebra de Ciclo da Pobreza':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      case 'Prosperidade em Desenvolvimento':
         return 'bg-green-100 text-green-800 border-green-200'
-      case 'Médio':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'Alto':
+      case 'Dignidade':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'Pobreza':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'Pobreza Extrema':
         return 'bg-red-100 text-red-800 border-red-200'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
