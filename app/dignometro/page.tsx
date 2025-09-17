@@ -1,134 +1,113 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
-import { AuthService } from "@/lib/auth"
-import { mockAssessments } from "@/lib/mock-data"
-import type { Assessment } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, CheckCircle } from "lucide-react"
+import { supabaseBrowserClient } from '@/lib/supabase/browser'
 
-interface Question {
-  id: string
-  text: string
-  options: {
-    value: string
-    label: string
-    score: number
-  }[]
-}
+// ✅ FASE 2.1: Novos imports para sistema Sim/Não
+import { diagnosticoQuestions } from '@/lib/diagnostico'
+import { QuestionCard } from './components/QuestionCard'
+import { useDiagnostico } from './hooks/useDiagnostico'
+import { useProgress } from './hooks/useProgress'
 
-const questions: Question[] = [
-  {
-    id: "housing",
-    text: "Como você avalia as condições da sua moradia?",
-    options: [
-      { value: "excellent", label: "Excelente - Casa própria em bom estado", score: 10 },
-      { value: "good", label: "Boa - Casa própria com pequenos reparos necessários", score: 8 },
-      { value: "fair", label: "Regular - Casa alugada em bom estado", score: 6 },
-      { value: "poor", label: "Ruim - Moradia precária ou em área de risco", score: 3 },
-      { value: "very-poor", label: "Muito ruim - Sem moradia fixa", score: 1 },
-    ],
-  },
-  {
-    id: "income",
-    text: "Como você avalia a renda familiar mensal?",
-    options: [
-      { value: "sufficient", label: "Suficiente para todas as necessidades e sobra", score: 10 },
-      { value: "adequate", label: "Adequada para as necessidades básicas", score: 8 },
-      { value: "tight", label: "Justa, às vezes falta para algumas coisas", score: 6 },
-      { value: "insufficient", label: "Insuficiente, frequentemente falta dinheiro", score: 3 },
-      { value: "very-insufficient", label: "Muito insuficiente, sempre em dificuldades", score: 1 },
-    ],
-  },
-  {
-    id: "education",
-    text: "Qual o nível de escolaridade dos adultos da família?",
-    options: [
-      { value: "higher", label: "Ensino superior completo", score: 10 },
-      { value: "high-school", label: "Ensino médio completo", score: 8 },
-      { value: "elementary", label: "Ensino fundamental completo", score: 6 },
-      { value: "incomplete", label: "Ensino fundamental incompleto", score: 3 },
-      { value: "illiterate", label: "Não alfabetizado", score: 1 },
-    ],
-  },
-  {
-    id: "health",
-    text: "Como você avalia o acesso da família aos serviços de saúde?",
-    options: [
-      { value: "excellent", label: "Excelente - Plano de saúde privado", score: 10 },
-      { value: "good", label: "Bom - SUS com acesso fácil", score: 8 },
-      { value: "fair", label: "Regular - SUS com algumas dificuldades", score: 6 },
-      { value: "poor", label: "Ruim - Dificuldades frequentes de acesso", score: 3 },
-      { value: "very-poor", label: "Muito ruim - Sem acesso adequado", score: 1 },
-    ],
-  },
-  {
-    id: "food",
-    text: "Como está a segurança alimentar da sua família?",
-    options: [
-      { value: "secure", label: "Sempre temos comida suficiente e variada", score: 10 },
-      { value: "mild-insecurity", label: "Às vezes falta variedade na alimentação", score: 8 },
-      { value: "moderate-insecurity", label: "Frequentemente falta comida", score: 6 },
-      { value: "severe-insecurity", label: "Muitas vezes passamos fome", score: 3 },
-      { value: "very-severe", label: "Constantemente em insegurança alimentar", score: 1 },
-    ],
-  },
-]
+// ❌ REMOVIDO: Sistema antigo de múltiplas escolhas
+// ✅ Agora usando diagnosticoQuestions de @/lib/diagnostico
 
 export default function DignometroPage() {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  // ✅ FASE 2.2: Nova lógica de state com hooks
+  const { responses, updateResponse, isAnswered } = useDiagnostico()
+  const { currentStep, totalSteps, nextStep, previousStep, currentQuestion } = useProgress()
+  
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
+  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100
+  // ✅ Buscar familyId usando a mesma estratégia da página da família
+  useEffect(() => {
+    const fetchFamilyId = async () => {
+      try {
+        setIsLoading(true)
+        setAuthError(null)
 
-  const handleAnswer = (questionId: string, value: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: value,
-    }))
+        // Verificar se o usuário está autenticado
+        const { data: { session }, error: sessionError } = await supabaseBrowserClient.auth.getSession()
+        
+        if (sessionError || !session?.user?.email) {
+          setAuthError('Usuário não autenticado')
+          router.push('/')
+          return
+        }
+
+        // Buscar dados da família com token de autenticação
+        const response = await fetch('/api/familia/get', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setAuthError('Família não encontrada. Verifique se você completou o cadastro.')
+          } else if (response.status === 401) {
+            setAuthError('Sessão expirada. Faça login novamente.')
+            router.push('/')
+          } else {
+            setAuthError('Erro ao carregar dados da família')
+          }
+          return
+        }
+
+        const data = await response.json()
+        setFamilyId(data.family.id)
+
+      } catch (err) {
+        console.error('Erro ao buscar familyId:', err)
+        setAuthError('Erro de conexão. Tente novamente.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFamilyId()
+  }, [])
+
+  const progress = ((currentStep + 1) / totalSteps) * 100
+
+  // ✅ FASE 2.2: Nova lógica de manipulação de respostas
+  const handleAnswer = (questionId: string, answer: boolean) => {
+    updateResponse(questionId, answer)
   }
 
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
+    if (currentStep < totalSteps - 1) {
+      nextStep()
     } else {
       handleSubmit()
     }
   }
 
   const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1)
+    if (currentStep > 0) {
+      previousStep()
     }
   }
 
+  // ✅ FASE 2.2: Nova lógica de cálculo de score (Sim/Não)
   const calculateScore = () => {
-    let totalScore = 0
-    let answeredQuestions = 0
-
-    questions.forEach((question) => {
-      const answer = answers[question.id]
-      if (answer) {
-        const option = question.options.find((opt) => opt.value === answer)
-        if (option) {
-          totalScore += option.score
-          answeredQuestions++
-        }
-      }
-    })
-
-    return answeredQuestions > 0 ? Math.round((totalScore / answeredQuestions) * 10) / 10 : 0
+    const totalQuestions = diagnosticoQuestions.length
+    const positiveAnswers = Object.values(responses).filter(Boolean).length
+    return (positiveAnswers / totalQuestions) * 10
   }
 
   const getPovertyLevel = (score: number): "Baixo" | "Médio" | "Alto" => {
@@ -137,41 +116,57 @@ export default function DignometroPage() {
     return "Alto"
   }
 
+  // ✅ FASE 2.3: Nova lógica de submit com integração à API real
   const handleSubmit = async () => {
     setIsSubmitting(true)
-
+    
     try {
       const score = calculateScore()
-      const povertyLevel = getPovertyLevel(score)
-
-      // Simulate API call to save assessment
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const user = AuthService.getCurrentUser()
-      if (user?.familyId) {
-        const newAssessment: Assessment = {
-          id: `assess${Date.now()}`,
-          familyId: user.familyId,
-          date: new Date(),
-          score,
-          povertyLevel,
-        }
-
-        // Add to mock data (in a real app, this would be saved to database)
-        mockAssessments.unshift(newAssessment)
+      
+      if (!familyId) {
+        throw new Error('Family ID não encontrado. Tente recarregar a página.')
       }
 
-      setFinalScore(score)
-      setIsCompleted(true)
-
-      toast({
-        title: "Avaliação concluída!",
-        description: `Seu score foi ${score}/10 - Nível de pobreza: ${povertyLevel}`,
+      // Obter email do usuário autenticado
+      const { data: { session } } = await supabaseBrowserClient.auth.getSession()
+      const userEmail = session?.user?.email
+      
+      if (!userEmail) {
+        throw new Error('Usuário não autenticado')
+      }
+      
+      // ✅ Chamada real para a API criada na Fase 1
+      const response = await fetch('/api/dignometro/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          familyId: familyId,
+          responses: responses, // ✅ Objeto {pergunta: true/false}
+          userEmail: userEmail
+        })
       })
+
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao salvar avaliação')
+      }
+      
+      if (result.success) {
+        setFinalScore(score)
+        setIsCompleted(true)
+        toast({
+          title: "Avaliação concluída!",
+          description: `Score: ${score}/10 - Nível: ${result.povertyLevel}`,
+        })
+      } else {
+        throw new Error(result.error || 'Resposta inválida da API')
+      }
     } catch (error) {
+      console.error('Erro ao submeter avaliação:', error)
       toast({
         title: "Erro ao salvar avaliação",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
+        description: error instanceof Error ? error.message : 'Erro inesperado',
         variant: "destructive",
       })
     } finally {
@@ -179,9 +174,47 @@ export default function DignometroPage() {
     }
   }
 
-  const currentQuestionData = questions[currentQuestion]
-  const currentAnswer = answers[currentQuestionData?.id]
-  const canProceed = currentAnswer !== undefined
+  // ✅ Verificação de resposta usando novos hooks
+  const canProceed = isAnswered(currentQuestion.id)
+
+  // ✅ Tela de loading enquanto busca familyId
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando avaliação...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ✅ Tela de erro se não conseguir obter familyId
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-6">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro de Autenticação</h3>
+            <p className="text-red-600 mb-4">{authError}</p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Tentar Novamente
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/familia")} className="w-full">
+                Voltar ao Perfil
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (isCompleted) {
     return (
@@ -221,60 +254,114 @@ export default function DignometroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push("/familia")} className="mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header melhorado */}
+        <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => router.push("/familia")} 
+            className="mb-6 hover:bg-white/50 backdrop-blur-sm"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
+            Voltar ao Perfil
           </Button>
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-gray-900">Dignômetro</h1>
-            <span className="text-sm text-gray-600">
-              {currentQuestion + 1} de {questions.length}
-            </span>
+          
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Dignômetro
+                </h1>
+                <p className="text-gray-600 mt-1">Avaliação de vulnerabilidade social</p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Progresso</div>
+                <div className="text-xl font-bold text-gray-800">
+                  {currentStep + 1} de {totalSteps}
+                </div>
+                <div className="text-sm text-purple-600 font-medium">
+                  {Math.round(progress)}% concluído
+                </div>
+              </div>
+            </div>
+            
+            <div className="relative">
+              <Progress 
+                value={progress} 
+                className="h-3 bg-gray-200 rounded-full overflow-hidden"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
+                   style={{ width: `${progress}%` }}>
+              </div>
+            </div>
           </div>
-          <Progress value={progress} className="w-full" />
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{currentQuestionData.text}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={currentAnswer || ""}
-              onValueChange={(value) => handleAnswer(currentQuestionData.id, value)}
-            >
-              <div className="space-y-3">
-                {currentQuestionData.options.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="flex-1 cursor-pointer">
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
+        {/* Card da pergunta centralizado */}
+        <div className="flex justify-center mb-8">
+          <QuestionCard
+            question={currentQuestion}
+            onAnswer={handleAnswer}
+            selectedValue={responses[currentQuestion.id]}
+          />
+        </div>
 
-        <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={handlePrevious} disabled={currentQuestion === 0}>
+        {/* Navegação melhorada */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 max-w-3xl mx-auto">
+          <Button 
+            variant="outline" 
+            onClick={handlePrevious} 
+            disabled={currentStep === 0}
+            className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white order-2 sm:order-1 px-8 py-3"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Anterior
           </Button>
+          
+          <div className="text-center text-sm text-gray-600 order-1 sm:order-2">
+            <div className="bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
+              Pergunta {currentStep + 1} de {totalSteps}
+            </div>
+          </div>
+          
           <Button
             onClick={handleNext}
             disabled={!canProceed || isSubmitting}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg order-3 px-8 py-3 rounded-xl"
           >
-            {isSubmitting
-              ? "Salvando..."
-              : currentQuestion === questions.length - 1
-                ? "Finalizar Avaliação"
-                : "Próxima"}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Salvando...
+              </>
+            ) : (
+              <>
+                {currentStep === totalSteps - 1 ? "Finalizar Avaliação" : "Próxima"}
+                {currentStep < totalSteps - 1 && <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />}
+              </>
+            )}
           </Button>
+        </div>
+
+        {/* Indicador de progresso visual adicional */}
+        <div className="mt-8 max-w-3xl mx-auto">
+          <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+              {Array.from({ length: totalSteps }, (_, index) => (
+                <div
+                  key={index}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index <= currentStep
+                      ? 'bg-gradient-to-r from-purple-500 to-blue-500'
+                      : index === currentStep + 1
+                      ? 'bg-purple-200'
+                      : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

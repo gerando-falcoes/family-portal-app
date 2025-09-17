@@ -155,3 +155,38 @@ export type BrazilianState =
   | "SP"
   | "SE"
   | "TO"
+
+// ✅ FASE 1.1: Novos tipos para Dignômetro (Sim/Não)
+export interface DiagnosticoQuestion {
+  id: string;
+  dimensao: string;
+  pergunta: string;
+}
+
+export interface DiagnosticoResponse {
+  id: string;
+  userId: string;
+  userEmail: string;
+  familyId: string;
+  responses: Record<string, boolean>; // ✅ Sim/Não apenas
+  score: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DiagnosticoProgress {
+  currentStep: number;
+  totalSteps: number;
+  completedSteps: number;
+}
+
+export interface DignometroAssessment {
+  id: string;
+  family_id: string;
+  answers: Record<string, boolean>; // ✅ Nova estrutura
+  poverty_score: number;
+  poverty_level: string;
+  dimension_scores: Record<string, number>; // ✅ JSONB estruturado
+  assessment_date: string;
+  created_at: string;
+}
