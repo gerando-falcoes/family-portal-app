@@ -35,7 +35,7 @@ export interface Assessment {
   familyId: string
   date: Date
   score: number
-  povertyLevel: "Baixo" | "Médio" | "Alto"
+  povertyLevel: "pobreza extrema" | "pobreza" | "dignidade" | "prosperidade em desenvolvimento" | "quebra de ciclo da pobreza"
   details?: string
 }
 

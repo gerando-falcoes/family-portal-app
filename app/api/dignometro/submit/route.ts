@@ -17,8 +17,19 @@ export async function POST(request: Request) {
     const positiveAnswers = Object.values(responses).filter(Boolean).length;
     const score = (positiveAnswers / totalQuestions) * 10;
     
-    // Classificar nível de pobreza
-    const povertyLevel = score >= 7 ? 'Baixo' : score >= 4 ? 'Médio' : 'Alto';
+    // ✅ Nova classificação com 5 níveis de pobreza
+    let povertyLevel: string;
+    if (score >= 8.0) {
+      povertyLevel = 'quebra de ciclo da pobreza';
+    } else if (score >= 6.0) {
+      povertyLevel = 'prosperidade em desenvolvimento';
+    } else if (score >= 4.0) {
+      povertyLevel = 'dignidade';
+    } else if (score >= 2.0) {
+      povertyLevel = 'pobreza';
+    } else {
+      povertyLevel = 'pobreza extrema';
+    }
     
     // Calcular scores por dimensão (cada dimensão = 1 se Sim, 0 se Não)
     const dimensionScores = Object.entries(responses).reduce((acc, [key, value]) => {
