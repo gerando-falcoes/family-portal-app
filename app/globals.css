@@ -6,39 +6,63 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #F9FAFB; /* Cinza Claro */
-  --foreground: #1F2937; /* Cinza Escuro */
-  
-  /* Cards e Superfícies */
+  /* === CORES PRIMÁRIAS === */
+  --background: #F9FAFB;
+  --foreground: #1A1D2E;
   --card: #FFFFFF;
-  --card-foreground: #1F2937;
+  --card-foreground: #1A1D2E;
   
-  /* Cores Funcionais */
-  --primary: #3B82F6; /* Azul Confiança */
-  --primary-foreground: #FFFFFF;
-  --secondary: #10B981; /* Verde Esperança */
-  --secondary-foreground: #FFFFFF;
-  --accent: #F59E0B; /* Laranja Energia */
-  --accent-foreground: #FFFFFF;
-  --destructive: #EF4444; /* Vermelho para alertas */
-  --destructive-foreground: #FFFFFF;
+  /* === CORES FUNCIONAIS === */
+  --primary: #4F46E5;           /* Indigo moderno */
+  --primary-foreground: #F9FAFB;
+  --secondary: #10B981;         /* Verde sucesso */
+  --secondary-foreground: #F9FAFB;
+  --accent: #F59E0B;            /* Laranja energia */
+  --accent-foreground: #F9FAFB;
+  --destructive: #EF4444;       /* Vermelho alerta */
+  --destructive-foreground: #F9FAFB;
   
-  /* Elementos Neutros */
-  --muted: #F3F4F6; /* Cinza um pouco mais escuro que o background */
-  --muted-foreground: #6B7280; /* Cinza Médio */
-  --border: #E5E7EB; /* Borda suave */
-  --input: #E5E7EB;
-  --ring: #3B82F6; /* Azul Confiança para anéis de foco */
+  /* === CORES NEUTRAS === */
+  --muted: #F9FAFB;
+  --muted-foreground: #64748B;
+  --prose: #374151;             /* Cor para texto prose */
+  --border: #E2E8F0;
+  --input: #F1F5F9;
+  --ring: #4F46E5;
   
-  /* Cores para Gráficos */
+  /* === CORES PARA GRÁFICOS === */
   --chart-1: #10B981; /* Verde Esperança */
-  --chart-2: #3B82F6; /* Azul Confiança */
+  --chart-2: #4F46E5; /* Indigo Primário */
   --chart-3: #F59E0B; /* Laranja Energia */
   --chart-4: #8B5CF6; /* Roxo Dignidade */
   --chart-5: #EC4899; /* Rosa Cuidado */
   
-  /* Raio das Bordas */
-  --radius: 0.75rem; /* 12px - Bordas arredondadas */
+  /* === SISTEMA DE BORDAS === */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  
+  /* === SOMBRAS === */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  
+  /* === SISTEMA DE TIPOGRAFIA === */
+  --font-size-xs: 0.75rem;      /* 12px */
+  --font-size-sm: 0.875rem;     /* 14px */
+  --font-size-base: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+  --font-size-4xl: 2.25rem;     /* 36px */
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
 
   /* Kept from original */
   --popover: oklch(1 0 0);
@@ -90,8 +114,6 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -136,7 +158,118 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+@layer components {
+  /* === CLASSES CUSTOMIZADAS === */
+  .text-prose {
+    color: hsl(var(--prose));
+  }
+  
+  /* === SISTEMA DE SOMBRAS === */
+  .shadow-card {
+    box-shadow: var(--shadow-md);
+  }
+  
+  .shadow-card-hover {
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .shadow-button-primary {
+    box-shadow: 0 4px 14px 0 rgb(79 70 229 / 0.2);
+  }
+  
+  .shadow-button-secondary {
+    box-shadow: 0 4px 14px 0 rgb(16 185 129 / 0.2);
+  }
+  
+  /* === ANIMAÇÕES CUSTOMIZADAS === */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out;
+  }
+  
+  /* === GRADIENTES PADRÃO === */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  }
+  
+  .bg-gradient-card {
+    background: linear-gradient(135deg, hsl(var(--muted)) 0%, hsl(var(--background)) 100%);
+  }
+}
+
+@layer utilities {
+  /* === UTILITÁRIOS DE TIPOGRAFIA === */
+  .text-xs { font-size: var(--font-size-xs); }
+  .text-sm { font-size: var(--font-size-sm); }
+  .text-base { font-size: var(--font-size-base); }
+  .text-lg { font-size: var(--font-size-lg); }
+  .text-xl { font-size: var(--font-size-xl); }
+  .text-2xl { font-size: var(--font-size-2xl); }
+  .text-3xl { font-size: var(--font-size-3xl); }
+  .text-4xl { font-size: var(--font-size-4xl); }
+  
+  .leading-tight { line-height: var(--line-height-tight); }
+  .leading-normal { line-height: var(--line-height-normal); }
+  .leading-relaxed { line-height: var(--line-height-relaxed); }
+}
+
+/* === KEYFRAMES PARA ANIMAÇÕES === */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* === ANIMAÇÃO RAINBOW PARA BOTÕES ESPECIAIS === */
+@keyframes rainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-rainbow {
+  animation: rainbow 3s ease-in-out infinite;
+}
+
+.animate-spinner {
+  animation: spin 1s linear infinite;
 }
 
 /* Custom Scrollbar */
