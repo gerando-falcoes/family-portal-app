@@ -1,369 +1,264 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, CheckCircle } from "lucide-react"
+import { ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react"
 import { supabaseBrowserClient } from '@/lib/supabase/browser'
-
-// ✅ FASE 2.1: Novos imports para sistema Sim/Não
 import { diagnosticoQuestions } from '@/lib/diagnostico'
 import { QuestionCard } from './components/QuestionCard'
 import { useDiagnostico } from './hooks/useDiagnostico'
 import { useProgress } from './hooks/useProgress'
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 
-// ❌ REMOVIDO: Sistema antigo de múltiplas escolhas
-// ✅ Agora usando diagnosticoQuestions de @/lib/diagnostico
+// --- UTILS ---
+const formatPovertyLevel = (level: string): string => {
+  const levels: { [key: string]: string } = { 'extrema pobreza': 'Extrema Pobreza', 'pobreza': 'Pobreza', 'vulnerabilidade': 'Vulnerabilidade', 'dignidade': 'Dignidade', 'desenvolvimento': 'Desenvolvimento' };
+  return levels[level?.toLowerCase()] || level;
+};
 
+const getPovertyLevelVariant = (level: string): BadgeProps["variant"] => {
+  const formattedLevel = level.toLowerCase();
+  switch (formattedLevel) {
+    case 'desenvolvimento': return 'secondary';
+    case 'dignidade': return 'default';
+    case 'vulnerabilidade': return 'accent';
+    case 'pobreza':
+    case 'extrema pobreza': return 'destructive';
+    default: return 'outline';
+  }
+};
+
+// --- ANIMATION VARIANTS ---
+const questionVariants = {
+  enter: (direction: number) => ({ x: direction > 0 ? 500 : -500, opacity: 0 }),
+  center: { zIndex: 1, x: 0, opacity: 1 },
+  exit: (direction: number) => ({ zIndex: 0, x: direction < 0 ? 500 : -500, opacity: 0 }),
+};
+
+// --- MAIN PAGE ---
 export default function DignometroPage() {
-  // ✅ FASE 2.2: Nova lógica de state com hooks
-  const { responses, updateResponse, isAnswered } = useDiagnostico()
-  const { currentStep, totalSteps, nextStep, previousStep, currentQuestion } = useProgress()
-  
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [finalScore, setFinalScore] = useState(0)
-  const [familyId, setFamilyId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const router = useRouter()
-  const { toast } = useToast()
+  const { responses, updateResponse, isAnswered } = useDiagnostico();
+  const { currentStep, totalSteps, nextStep, previousStep, currentQuestion, direction } = useProgress();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
+  const [finalLevel, setFinalLevel] = useState('');
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  // ✅ Buscar familyId usando a mesma estratégia da página da família
   useEffect(() => {
     const fetchFamilyId = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true)
-        setAuthError(null)
-
-        // Verificar se o usuário está autenticado
-        const { data: { session }, error: sessionError } = await supabaseBrowserClient.auth.getSession()
-        
+        const { data: { session }, error: sessionError } = await supabaseBrowserClient.auth.getSession();
         if (sessionError || !session?.user?.email) {
-          setAuthError('Usuário não autenticado')
-          router.push('/')
-          return
+          setAuthError('Usuário não autenticado. Redirecionando...');
+          router.push('/');
+          return;
         }
-
-        // Buscar dados da família com token de autenticação
-        const response = await fetch('/api/familia/get', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            setAuthError('Família não encontrada. Verifique se você completou o cadastro.')
-          } else if (response.status === 401) {
-            setAuthError('Sessão expirada. Faça login novamente.')
-            router.push('/')
-          } else {
-            setAuthError('Erro ao carregar dados da família')
-          }
-          return
-        }
-
-        const data = await response.json()
-        setFamilyId(data.family.id)
-
+        const response = await fetch('/api/familia/get', { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+        if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || 'Erro ao carregar dados.'); }
+        const data = await response.json();
+        setFamilyId(data.family.id);
       } catch (err) {
-        console.error('Erro ao buscar familyId:', err)
-        setAuthError('Erro de conexão. Tente novamente.')
+        setAuthError(err instanceof Error ? err.message : 'Erro de conexão.');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
+    fetchFamilyId();
+  }, [router]);
 
-    fetchFamilyId()
-  }, [])
+  const progress = ((currentStep + 1) / totalSteps) * 100;
 
-  const progress = ((currentStep + 1) / totalSteps) * 100
-
-  // ✅ FASE 2.2: Nova lógica de manipulação de respostas
-  const handleAnswer = (questionId: string, answer: boolean) => {
-    updateResponse(questionId, answer)
-  }
-
-  const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
-      nextStep()
-    } else {
-      handleSubmit()
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      previousStep()
-    }
-  }
-
-  // ✅ FASE 2.2: Nova lógica de cálculo de score (Sim/Não)
-  const calculateScore = () => {
-    const totalQuestions = diagnosticoQuestions.length
-    const positiveAnswers = Object.values(responses).filter(Boolean).length
-    return (positiveAnswers / totalQuestions) * 10
-  }
-
-  const getPovertyLevel = (score: number): "Baixo" | "Médio" | "Alto" => {
-    if (score >= 7) return "Baixo"
-    if (score >= 4) return "Médio"
-    return "Alto"
-  }
-
-  // ✅ FASE 2.3: Nova lógica de submit com integração à API real
   const handleSubmit = async () => {
-    setIsSubmitting(true)
-    
+    setIsSubmitting(true);
     try {
-      const score = calculateScore()
-      
-      if (!familyId) {
-        throw new Error('Family ID não encontrado. Tente recarregar a página.')
-      }
+      if (!familyId) throw new Error('ID da família não encontrado.');
+      const { data: { session } } = await supabaseBrowserClient.auth.getSession();
+      if (!session?.user?.email) throw new Error('Usuário não autenticado.');
 
-      // Obter email do usuário autenticado
-      const { data: { session } } = await supabaseBrowserClient.auth.getSession()
-      const userEmail = session?.user?.email
-      
-      if (!userEmail) {
-        throw new Error('Usuário não autenticado')
-      }
-      
-      // ✅ Chamada real para a API criada na Fase 1
       const response = await fetch('/api/dignometro/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          familyId: familyId,
-          responses: responses, // ✅ Objeto {pergunta: true/false}
-          userEmail: userEmail
-        })
-      })
+        body: JSON.stringify({ familyId, responses, userEmail: session.user.email }),
+      });
 
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao salvar avaliação')
-      }
-      
-      if (result.success) {
-        setFinalScore(score)
-        setIsCompleted(true)
-        toast({
-          title: "Avaliação concluída!",
-          description: `Score: ${score}/10 - Nível: ${result.povertyLevel}`,
-        })
-      } else {
-        throw new Error(result.error || 'Resposta inválida da API')
-      }
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao salvar avaliação.');
+
+      setFinalScore(result.score);
+      setFinalLevel(result.povertyLevel);
+      setIsCompleted(true);
+      toast({ title: "Avaliação concluída com sucesso!" });
     } catch (error) {
-      console.error('Erro ao submeter avaliação:', error)
-      toast({
-        title: "Erro ao salvar avaliação",
-        description: error instanceof Error ? error.message : 'Erro inesperado',
-        variant: "destructive",
-      })
+      toast({ title: "Erro ao salvar avaliação", description: error instanceof Error ? error.message : 'Erro inesperado.', variant: "destructive" });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  // ✅ Verificação de resposta usando novos hooks
-  const canProceed = isAnswered(currentQuestion.id)
-
-  // ✅ Tela de loading enquanto busca familyId
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando avaliação...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // ✅ Tela de erro se não conseguir obter familyId
-  if (authError) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro de Autenticação</h3>
-            <p className="text-red-600 mb-4">{authError}</p>
-            <div className="space-y-2">
-              <Button onClick={() => window.location.reload()} className="w-full">
-                Tentar Novamente
-              </Button>
-              <Button variant="outline" onClick={() => router.push("/familia")} className="w-full">
-                Voltar ao Perfil
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  if (isLoading) return <StateScreen icon={Loader2} title="Carregando..." message="Buscando informações da sua família." spinner />;
+  if (authError) return <StateScreen icon={AlertTriangle} title="Erro de Autenticação" message={authError} isError />;
 
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl">Avaliação Concluída!</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-2">{finalScore}</div>
-              <div className="text-lg text-gray-600">/ 10</div>
-              <div className="mt-4">
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    getPovertyLevel(finalScore) === "Baixo"
-                      ? "bg-blue-100 text-blue-800"
-                      : getPovertyLevel(finalScore) === "Médio"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  Nível de Pobreza: {getPovertyLevel(finalScore)}
-                </span>
-              </div>
-            </div>
-            <Button onClick={() => router.push("/familia")} className="w-full bg-purple-600 hover:bg-purple-700">
-              Voltar ao Perfil
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+      <StateScreen icon={CheckCircle} title="Avaliação Concluída!" isSuccess>
+        <div className="text-center space-y-4">
+          <div>
+            <span className="text-6xl font-bold text-gray-800">{finalScore.toFixed(1)}</span>
+            <span className="text-gray-600"> / 10</span>
+          </div>
+          <Badge variant={getPovertyLevelVariant(finalLevel)} className="text-base py-1 px-3 rounded-md">{formatPovertyLevel(finalLevel)}</Badge>
+          <button 
+            onClick={() => router.push("/familia")} 
+            className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            Voltar ao Perfil
+          </button>
+        </div>
+      </StateScreen>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative flex flex-col items-center justify-center p-4">
+      <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cdefs%3E%3Cpattern id=\"grid\" width=\"32\" height=\"32\" patternUnits=\"userSpaceOnUse\"%3E%3Cpath d=\"M 32 0 L 0 0 0 32\" fill=\"none\" stroke=\"%23e2e8f0\" stroke-width=\"1\"/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\"100%25\" height=\"100%25\" fill=\"url(%23grid)\" /%3E%3C/svg%3E')"}}></div>
+      <div className="relative z-10 w-full max-w-3xl">
         {/* Header melhorado */}
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
+        <motion.div 
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex items-center justify-center gap-4 mb-4">
+          <button 
             onClick={() => router.push("/familia")} 
-            className="mb-6 hover:bg-white/50 backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao Perfil
-          </Button>
+            <ArrowLeft className="w-4 h-4" /> 
+            Voltar
+          </button>
+            <div className="flex-1" />
+          </div>
           
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  Dignômetro
-                </h1>
-                <p className="text-gray-600 mt-1">Avaliação de vulnerabilidade social</p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Progresso</div>
-                <div className="text-xl font-bold text-gray-800">
-                  {currentStep + 1} de {totalSteps}
-                </div>
-                <div className="text-sm text-purple-600 font-medium">
-                  {Math.round(progress)}% concluído
-                </div>
-              </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-800">Dignômetro</h1>
+            <p className="text-gray-600">Avaliação socioeconômica para medir a dignidade familiar</p>
+          </div>
+          
+          {/* Progress bar melhorada */}
+          <div className="mt-6 space-y-2">
+            <div className="flex justify-between items-center text-sm text-gray-600">
+              <span>Pergunta {currentStep + 1} de {totalSteps}</span>
+              <span>{Math.round(progress)}% concluído</span>
             </div>
-            
-            <div className="relative">
-              <Progress 
-                value={progress} 
-                className="h-3 bg-gray-200 rounded-full overflow-hidden"
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
-                   style={{ width: `${progress}%` }}>
-              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Card da pergunta centralizado */}
-        <div className="flex justify-center mb-8">
-          <QuestionCard
-            question={currentQuestion}
-            onAnswer={handleAnswer}
-            selectedValue={responses[currentQuestion.id]}
-          />
-        </div>
+        {/* Card da pergunta */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden backdrop-blur-sm">
+            <div className="p-8 min-h-[400px] flex items-center justify-center">
+              <AnimatePresence initial={false} custom={direction}>
+                <motion.div
+                  key={currentStep}
+                  custom={direction}
+                  variants={questionVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                  className="w-full absolute"
+                >
+                  <QuestionCard question={currentQuestion} onAnswer={updateResponse} selectedValue={responses[currentQuestion.id]} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Navegação melhorada */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 max-w-3xl mx-auto">
-          <Button 
-            variant="outline" 
-            onClick={handlePrevious} 
+        <motion.div 
+          className="flex justify-between items-center mt-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <button 
+            className="flex items-center gap-2 px-6 py-3 text-lg border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={previousStep} 
             disabled={currentStep === 0}
-            className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white order-2 sm:order-1 px-8 py-3"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4" />
             Anterior
-          </Button>
+          </button>
           
-          <div className="text-center text-sm text-gray-600 order-1 sm:order-2">
-            <div className="bg-white/60 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
-              Pergunta {currentStep + 1} de {totalSteps}
-            </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i <= currentStep ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              />
+            ))}
           </div>
           
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed || isSubmitting}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg order-3 px-8 py-3 rounded-xl"
+          <button 
+            className="flex items-center gap-2 px-6 py-3 text-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" 
+            onClick={currentStep < totalSteps - 1 ? nextStep : handleSubmit} 
+            disabled={!isAnswered(currentQuestion.id) || isSubmitting}
           >
             {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Salvando...
-              </>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Finalizando...
+              </div>
             ) : (
-              <>
+              <div className="flex items-center gap-2">
                 {currentStep === totalSteps - 1 ? "Finalizar Avaliação" : "Próxima"}
                 {currentStep < totalSteps - 1 && <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />}
-              </>
+              </div>
             )}
-          </Button>
-        </div>
-
-        {/* Indicador de progresso visual adicional */}
-        <div className="mt-8 max-w-3xl mx-auto">
-          <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-              {Array.from({ length: totalSteps }, (_, index) => (
-                <div
-                  key={index}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index <= currentStep
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500'
-                      : index === currentStep + 1
-                      ? 'bg-purple-200'
-                      : 'bg-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+          </button>
+        </motion.div>
       </div>
     </div>
-  )
+  );
 }
+
+// --- SUB-COMPONENTS ---
+const StateScreen = ({ icon: Icon, title, message, children, isError, isSuccess, spinner }: any) => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
+      <div className="w-full max-w-md text-center bg-white rounded-2xl shadow-xl border border-gray-100 p-8 space-y-4">
+        <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${isError ? 'bg-red-50' : isSuccess ? 'bg-green-50' : 'bg-gray-100'}`}>
+          <Icon className={`w-8 h-8 ${isError ? 'text-red-500' : isSuccess ? 'text-green-500' : 'text-blue-600'} ${spinner && 'animate-spin'}`} />
+        </div>
+        <h2 className="text-2xl font-semibold text-gray-800">{title}</h2>
+        {message && <p className="text-gray-600">{message}</p>}
+        {children}
+      </div>
+    </motion.div>
+  </div>
+);

@@ -17,12 +17,19 @@ const config: Config = {
       },
     },
     extend: {
+      boxShadow: {
+        card: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        'card-hover': '0 10px 25px rgba(0, 0, 0, 0.1)',
+        'button-primary': '0 4px 12px rgba(59, 130, 246, 0.3)',
+        'button-secondary': '0 4px 12px rgba(16, 185, 129, 0.3)',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        prose: "hsl(var(--prose-foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -53,9 +60,10 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        xl: "var(--radius)", // 12px
+        lg: 'calc(var(--radius) - 2px)', // 10px
+        md: 'calc(var(--radius) - 6px)', // 6px
+        sm: 'calc(var(--radius) - 8px)', // 4px
       },
       keyframes: {
         "accordion-down": {
@@ -66,59 +74,25 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "fade-in-up": {
-          "0%": {
-            opacity: "0",
-            transform: "translateY(20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateY(0)",
-          },
+        'fadeIn': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
         },
-        "fade-in-left": {
-          "0%": {
-            opacity: "0",
-            transform: "translateX(-20px)",
-          },
-          "100%": {
-            opacity: "1",
-            transform: "translateX(0)",
-          },
+        'slideUp': {
+          from: { opacity: '0', transform: 'translateY(20px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
         spin: {
-          from: {
-            transform: "rotate(0deg)",
-          },
-          to: {
-            transform: "rotate(360deg)",
-          },
-        },
-        pulse: {
-          "0%, 100%": {
-            opacity: "1",
-          },
-          "50%": {
-            opacity: "0.5",
-          },
-        },
-        "progress-fill": {
-          from: {
-            width: "0%",
-          },
-          to: {
-            width: "var(--progress-width)",
-          },
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in-up": "fade-in-up 0.6s ease-out",
-        "fade-in-left": "fade-in-left 0.5s ease-out",
+        'fadeIn': 'fadeIn 0.6s ease-out',
+        'slideUp': 'slideUp 0.6s ease-out',
         spinner: "spin 1s linear infinite",
-        pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "progress-animated": "progress-fill 1.5s ease-out",
       },
     },
   },
