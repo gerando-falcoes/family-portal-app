@@ -1,10 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DiagnosticoService } from '@/lib/diagnostico';
 
 export function useDiagnostico() {
-  const [responses, setResponses] = useState<Record<string, boolean>>(() => 
-    DiagnosticoService.loadResponses()
-  );
+  // ✅ Sempre inicia com respostas vazias - usuário deve selecionar novamente
+  const [responses, setResponses] = useState<Record<string, boolean>>({});
+
+  // ✅ Limpa as respostas antigas do localStorage ao iniciar nova avaliação
+  useEffect(() => {
+    DiagnosticoService.clearResponses();
+  }, []);
 
   const updateResponse = useCallback((questionId: string, answer: boolean) => {
     setResponses(prev => ({ ...prev, [questionId]: answer }));
