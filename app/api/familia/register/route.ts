@@ -48,10 +48,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro ao salvar dados da família' }, { status: 500 });
     }
 
-    // 4. Retornar sucesso
+    // 4. Criar perfil na tabela 'profiles'
+    const profileRecord = {
+      name: familyData.name,
+      cpf: familyData.cpf,
+      phone: familyData.contacts.phone,
+      email: familyData.contacts.email || null, // Email é opcional
+      role: 'familia',
+      status_aprovacao: 'pendente',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: profileInsertData, error: profileError } = await supabaseServerClient
+      .from('profiles')
+      .insert([profileRecord])
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('Erro ao inserir perfil:', profileError);
+      // Se falhar ao criar o perfil, não falha o cadastro da família
+      // mas loga o erro para investigação
+      console.warn('Família criada mas perfil não foi criado:', familyInsertData.id);
+    }
+
+    // 5. Retornar sucesso
     return NextResponse.json({ 
       message: 'Família cadastrada com sucesso!', 
-      family: familyInsertData
+      family: familyInsertData,
+      profile: profileInsertData || null
     });
 
   } catch (error) {
