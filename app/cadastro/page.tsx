@@ -1,318 +1,394 @@
-"use client"
+'use client'
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import type { IncomeRange, BrazilianState } from "@/lib/types"
+import { Loader2, User, DollarSign, MapPin, Mail, Lock } from "lucide-react"
 
-const incomeRanges: IncomeRange[] = [
-  "Até R$ 500",
-  "R$ 501 - R$ 1.000",
-  "R$ 1.001 - R$ 1.500",
-  "R$ 1.501 - R$ 2.000",
-  "R$ 2.001 - R$ 3.000",
-  "Acima de R$ 3.000",
-]
+const incomeRanges: IncomeRange[] = [ "Até R$ 500", "R$ 501 - R$ 1.000", "R$ 1.001 - R$ 1.500", "R$ 1.501 - R$ 2.000", "R$ 2.001 - R$ 3.000", "Acima de R$ 3.000" ]
+const brazilianStates: BrazilianState[] = [ "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO" ]
 
-const brazilianStates: BrazilianState[] = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-]
+const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.15 } } }
+const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.5 } } }
 
 export default function CadastroPage() {
-  const [formData, setFormData] = useState({
-    // Contatos
-    phone: "",
-    whatsapp: "",
+  const [formData, setFormData] = useState({ 
+    // Dados de login
     email: "",
-    // Dados Socioeconômicos
-    incomeRange: "" as IncomeRange | "",
-    familySize: "",
-    numberOfChildren: "",
-    // Endereço
-    street: "",
-    neighborhood: "",
-    city: "",
-    state: "" as BrazilianState | "",
-    referencePoint: "",
+    password: "",
+    // Dados da família
+    name: "", 
+    cpf: "",
+    phone: "", 
+    emailFamilia: "", 
+    incomeRange: "" as IncomeRange | "", 
+    familySize: "", 
+    cep: "",
+    street: "", 
+    neighborhood: "", 
+    city: "", 
+    state: "" as BrazilianState | "", 
+    referencePoint: "" 
   })
-
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
+  const handleInputChange = (field: string, value: string) => setFormData((prev) => ({ ...prev, [field]: value }))
+
+  // Função para formatar CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  // Função para validar CPF
+  const validateCPF = (cpf: string): boolean => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+    if (cleanCPF.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+    
+    // Validação do primeiro dígito
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCPF[i]) * (10 - i);
+    }
+    let remainder = sum % 11;
+    let digit1 = remainder < 2 ? 0 : 11 - remainder;
+    
+    if (parseInt(cleanCPF[9]) !== digit1) return false;
+    
+    // Validação do segundo dígito
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cleanCPF[i]) * (11 - i);
+    }
+    remainder = sum % 11;
+    let digit2 = remainder < 2 ? 0 : 11 - remainder;
+    
+    return parseInt(cleanCPF[10]) === digit2;
+  };
+
+  const handleCPFChange = (field: string, value: string) => {
+    const formatted = formatCPF(value);
+    setFormData((prev) => ({ ...prev, [field]: formatted }));
+  };
+
+  // Função para formatar CEP
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  // Função para buscar endereço por CEP
+  const fetchAddressByCEP = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          street: data.logradouro || '',
+          neighborhood: data.bairro || '',
+          city: data.localidade || '',
+          state: data.uf || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
+
+  const handleCEPChange = (field: string, value: string) => {
+    const formatted = formatCEP(value);
+    setFormData((prev) => ({ ...prev, [field]: formatted }));
+    
+    // Buscar endereço quando CEP for completo
+    if (formatted.replace(/\D/g, '').length === 8) {
+      fetchAddressByCEP(formatted);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    // Validate required fields
-    const requiredFields = [
-      "phone",
-      "email",
-      "incomeRange",
-      "familySize",
-      "numberOfChildren",
-      "street",
-      "neighborhood",
-      "city",
-      "state",
-    ]
-
-    const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
+    
+    // Validar campos obrigatórios
+    const requiredFields: (keyof typeof formData)[] = [ "email", "password", "name", "cpf", "phone", "incomeRange", "familySize", "street", "neighborhood", "city", "state" ]
+    const missingFields = requiredFields.filter((field) => !formData[field])
 
     if (missingFields.length > 0) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      })
+      toast({ title: "Campos obrigatórios", description: `Por favor, preencha: ${missingFields.join(", ")}`, variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar CPF
+    if (!validateCPF(formData.cpf)) {
+      toast({ title: "CPF inválido", description: "Por favor, insira um CPF válido.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar email
+    if (!formData.email.includes('@')) {
+      toast({ title: "Email inválido", description: "Por favor, insira um email válido.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar senha
+    if (formData.password.length < 6) {
+      toast({ title: "Senha muito curta", description: "A senha deve ter pelo menos 6 caracteres.", variant: "destructive" })
       setIsLoading(false)
       return
     }
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const response = await fetch('/api/familia/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          familyData: {
+            name: formData.name,
+            cpf: formData.cpf,
+            contacts: {
+              phone: formData.phone,
+              email: formData.emailFamilia || formData.email
+            },
+            socioeconomic: {
+              incomeRange: formData.incomeRange,
+              familySize: parseInt(formData.familySize)
+            },
+            address: {
+              cep: formData.cep,
+              street: formData.street,
+              neighborhood: formData.neighborhood,
+              city: formData.city,
+              state: formData.state,
+              referencePoint: formData.referencePoint || ''
+            }
+          }
+        }),
+      });
 
-      toast({
-        title: "Família cadastrada com sucesso!",
-        description: "Redirecionando para a página de login...",
-      })
-
-      setTimeout(() => {
-        router.push("/")
-      }, 2000)
+      if (response.ok) {
+        toast({ title: "Família cadastrada com sucesso!", description: "Redirecionando para a página inicial..." })
+        setTimeout(() => router.push("/"), 2000)
+      } else {
+        const errorData = await response.json();
+        toast({ title: "Erro no cadastro", description: errorData.error || "Ocorreu um erro inesperado.", variant: "destructive" })
+      }
     } catch (error) {
-      toast({
-        title: "Erro no cadastro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      })
+      toast({ title: "Erro no cadastro", description: "Ocorreu um erro inesperado.", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleCancel = () => {
-    router.push("/")
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cadastrar Família</h1>
-          <p className="text-gray-600">Informe contatos, dados socioeconômicos e endereço.</p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Contatos */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Contatos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    placeholder="(XX) XXXX-XXXX"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input
-                    id="whatsapp"
-                    placeholder="(XX) XXXX-XXXX"
-                    value={formData.whatsapp}
-                    onChange={(e) => handleInputChange("whatsapp", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="exemplo@email.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dados Socioeconômicos */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Dados Socioeconômicos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="incomeRange">Faixa de Renda</Label>
-                  <Select
-                    value={formData.incomeRange}
-                    onValueChange={(value) => handleInputChange("incomeRange", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a faixa de renda" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incomeRanges.map((range) => (
-                        <SelectItem key={range} value={range}>
-                          {range}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="familySize">Tamanho da Família</Label>
-                  <Input
-                    id="familySize"
-                    type="number"
-                    min="1"
-                    placeholder="Informe o tamanho da família"
-                    value={formData.familySize}
-                    onChange={(e) => handleInputChange("familySize", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="numberOfChildren">Número de Filhos</Label>
-                  <Input
-                    id="numberOfChildren"
-                    type="number"
-                    min="0"
-                    placeholder="Informe o número de filhos"
-                    value={formData.numberOfChildren}
-                    onChange={(e) => handleInputChange("numberOfChildren", e.target.value)}
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Endereço */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Endereço</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="street">Rua</Label>
-                  <Input
-                    id="street"
-                    placeholder="Informe a rua"
-                    value={formData.street}
-                    onChange={(e) => handleInputChange("street", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="neighborhood">Bairro</Label>
-                  <Input
-                    id="neighborhood"
-                    placeholder="Informe o bairro"
-                    value={formData.neighborhood}
-                    onChange={(e) => handleInputChange("neighborhood", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">Cidade</Label>
-                    <Input
-                      id="city"
-                      placeholder="Informe a cidade"
-                      value={formData.city}
-                      onChange={(e) => handleInputChange("city", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">Estado</Label>
-                    <Select value={formData.state} onValueChange={(value) => handleInputChange("state", value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="UF" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {brazilianStates.map((state) => (
-                          <SelectItem key={state} value={state}>
-                            {state}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="referencePoint">Ponto de Referência</Label>
-                  <Input
-                    id="referencePoint"
-                    placeholder="Informe um ponto de referência"
-                    value={formData.referencePoint}
-                    onChange={(e) => handleInputChange("referencePoint", e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
-              {isLoading ? "Salvando..." : "Salvar"}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative">
+      <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cdefs%3E%3Cpattern id=\"grid\" width=\"32\" height=\"32\" patternUnits=\"userSpaceOnUse\"%3E%3Cpath d=\"M 32 0 L 0 0 0 32\" fill=\"none\" stroke=\"%23e2e8f0\" stroke-width=\"1\"/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\"100%25\" height=\"100%25\" fill=\"url(%23grid)\" /%3E%3C/svg%3E')"}}></div>
+      
+      <div className="relative z-10">
+        <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur-lg shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-800">Cadastrar Família</h1>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push("/")} 
+              className="rounded-md flex items-center gap-2"
+            >
+              Voltar
             </Button>
           </div>
-        </form>
+        </header>
+
+        <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+          <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+            <motion.div variants={itemVariants} className="mb-8 text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-800 mb-2">Criar Conta e Cadastrar Família</h2>
+              <p className="text-gray-600">Crie sua conta e informe os dados da família.</p>
+            </motion.div>
+
+            <form onSubmit={handleSubmit}>
+              <motion.div variants={containerVariants} className="space-y-8">
+                
+                {/* Dados de Login */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
+                        <Lock className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Dados de Acesso</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField id="email" label="Email para Login" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleInputChange} />
+                      <FormField id="password" label="Senha" type="password" placeholder="Mínimo 6 caracteres" value={formData.password} onChange={handleInputChange} />
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* Informações da Família */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Informações da Família</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <FormField id="name" label="Nome da Família" placeholder="Ex: Família Silva" value={formData.name} onChange={handleInputChange} />
+                      <FormField id="cpf" label="CPF" placeholder="000.000.000-00" value={formData.cpf} onChange={handleCPFChange} />
+                      <FormField id="phone" label="Telefone/WhatsApp" placeholder="(11) 99999-9999" value={formData.phone} onChange={handleInputChange} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mt-6">
+                      <FormField id="emailFamilia" label="Email da Família (Opcional)" type="email" placeholder="familia@exemplo.com" value={formData.emailFamilia} onChange={handleInputChange} />
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* Dados Socioeconômicos */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                        <DollarSign className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Dados Socioeconômicos</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormSelect id="incomeRange" label="Faixa de Renda" placeholder="Selecione a faixa de renda" value={formData.incomeRange} options={incomeRanges} onChange={handleInputChange} />
+                      <FormField id="familySize" label="Tamanho da Família" type="number" min="1" placeholder="Informe o tamanho da família" value={formData.familySize} onChange={handleInputChange} />
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* Endereço */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Endereço</h3>
+                    </div>
+                    <div className="space-y-6">
+                      <FormField id="cep" label="CEP (Opcional)" placeholder="12345-678" value={formData.cep} onChange={handleCEPChange} />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField id="street" label="Rua e Número" placeholder="Rua das Flores, 123" value={formData.street} onChange={handleInputChange} />
+                        <FormField id="neighborhood" label="Bairro" placeholder="Centro" value={formData.neighborhood} onChange={handleInputChange} />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField id="city" label="Cidade" placeholder="São Paulo" value={formData.city} onChange={handleInputChange} />
+                        <FormSelect id="state" label="Estado" placeholder="Estado" value={formData.state} options={brazilianStates} onChange={handleInputChange} />
+                        <FormField id="referencePoint" label="Ponto de Referência (Opcional)" placeholder="Próximo ao mercado" value={formData.referencePoint} onChange={handleInputChange} />
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="flex justify-end gap-4 mt-8">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="h-11 px-8 rounded-lg" 
+                  onClick={() => router.push("/")} 
+                  disabled={isLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="h-11 px-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Criando conta...
+                    </div>
+                  ) : (
+                    'Criar Conta e Cadastrar'
+                  )}
+                </Button>
+              </motion.div>
+            </form>
+          </motion.div>
+        </main>
       </div>
     </div>
   )
 }
+
+// --- SUB-COMPONENTS ---
+const FormField: React.FC<{ 
+  id: string
+  label: string
+  value: string
+  onChange: (id: string, value: string) => void
+  type?: string
+  placeholder?: string
+  min?: string 
+}> = ({ id, label, onChange, ...props }) => (
+  <div className="space-y-2">
+    <Label htmlFor={id} className="text-sm font-medium text-gray-600">
+      {label}
+    </Label>
+    <Input 
+      id={id} 
+      onChange={(e) => onChange(id, e.target.value)} 
+      className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg" 
+      {...props} 
+    />
+  </div>
+)
+
+const FormSelect: React.FC<{ 
+  id: string
+  label: string
+  value: string
+  placeholder: string
+  options: readonly string[]
+  onChange: (id: string, value: string) => void 
+}> = ({ id, label, value, placeholder, options, onChange }) => (
+  <div className="space-y-2">
+    <Label htmlFor={id} className="text-sm font-medium text-gray-600">
+      {label}
+    </Label>
+    <Select value={value} onValueChange={(val) => onChange(id, val)}>
+      <SelectTrigger id={id} className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+)
