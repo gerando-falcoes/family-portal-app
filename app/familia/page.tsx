@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Phone, MapPin, Users, LogOut, TrendingUp, AlertTriangle, Target, Loader2 } from "lucide-react"
+import { Phone, MapPin, Users, LogOut, TrendingUp, AlertTriangle, Target, Loader2, Edit } from "lucide-react"
+import { EditFamilyModal } from "./components/EditFamilyModal"
+import { useFamilyData } from "@/hooks/use-family-data"
+import { supabaseBrowserClient } from "@/lib/supabase/browser"
+import { useToast } from "@/components/ui/use-toast"
+import type { Family } from "@/lib/types"
 
 // Interfaces TypeScript
 interface FamilyData {
@@ -37,92 +42,63 @@ interface AssessmentData {
 
 export default function FamiliaPage() {
   const router = useRouter()
-  const [family, setFamily] = useState<FamilyData | null>(null)
-  const [latestAssessment, setLatestAssessment] = useState<AssessmentData | null>(null)
-  const [assessmentHistory, setAssessmentHistory] = useState<AssessmentData[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
+  const { family, latestAssessment, assessmentHistory, isLoading, error, refetch } = useFamilyData()
+  
+  // Estados para edição
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
 
-  useEffect(() => {
-    const fetchFamilyData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Obter token de autenticação do Supabase
-        const { supabaseBrowserClient } = await import('@/lib/supabase/browser')
-        const { data: { session } } = await supabaseBrowserClient.auth.getSession()
-        
-        if (!session?.access_token) {
-          throw new Error('Usuário não autenticado')
-        }
-        
-        // Buscar dados da família com token de autorização
-        const response = await fetch('/api/familia/get', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        })
-        if (!response.ok) {
-          throw new Error('Erro ao carregar dados da família')
-        }
-        
-        const data = await response.json()
-        
-        // Organizar dados da família
-        setFamily({
-          id: data.family.id,
-          name: data.family.name,
-          status: data.family.status,
-          contacts: {
-            phone: data.family.contacts.phone,
-            whatsapp: data.family.contacts.whatsapp,
-            email: data.family.contacts.email
-          },
-          socioeconomic: {
-            incomeRange: data.family.socioeconomic.incomeRange,
-            familySize: data.family.socioeconomic.familySize,
-            numberOfChildren: data.family.socioeconomic.numberOfChildren
-          },
-          address: {
-            street: data.family.address.street,
-            neighborhood: data.family.address.neighborhood,
-            city: data.family.address.city,
-            state: data.family.address.state,
-            referencePoint: data.family.address.referencePoint
-          }
-        })
+  // Função para salvar alterações
+  const handleSaveFamily = async (updatedData: Partial<Family>) => {
+    try {
+      setIsUpdating(true)
 
-        // Organizar última avaliação
-        if (data.latestAssessment) {
-          setLatestAssessment({
-            assessment_id: data.latestAssessment.assessment_id || '',
-            assessment_date: data.latestAssessment.assessment_date,
-            poverty_score: data.latestAssessment.poverty_score,
-            poverty_level: data.latestAssessment.poverty_level
-          })
-        }
-
-        // Organizar histórico de avaliações
-        if (data.assessmentHistory && data.assessmentHistory.length > 0) {
-          const formattedHistory = data.assessmentHistory.map((assessment: any) => ({
-            assessment_id: assessment.id,
-            assessment_date: assessment.assessment_date,
-            poverty_score: assessment.poverty_score,
-            poverty_level: assessment.poverty_level
-          }))
-          setAssessmentHistory(formattedHistory)
-        }
-        
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err)
-        setError(err instanceof Error ? err.message : 'Erro desconhecido')
-      } finally {
-        setIsLoading(false)
+      // Obter token de autenticação
+      const { data: { session } } = await supabaseBrowserClient.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('Usuário não autenticado')
       }
-    }
 
-    fetchFamilyData()
-  }, [])
+      // Fazer requisição para API de update
+      const response = await fetch('/api/familia/update', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          familyData: updatedData
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao atualizar dados')
+      }
+
+      // Sucesso!
+      toast({
+        title: "Sucesso!",
+        description: "Dados da família atualizados com sucesso.",
+      })
+
+      // Fechar modal e recarregar dados
+      setIsEditModalOpen(false)
+      await refetch()
+
+    } catch (error) {
+      console.error('Erro ao atualizar família:', error)
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao atualizar dados",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   // Estados de loading e erro
   if (isLoading) {
@@ -155,6 +131,13 @@ export default function FamiliaPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center gap-2 h-9 px-4 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                Editar Dados
+              </button>
               <button 
                 onClick={() => router.push("/dignometro")}
                 className="h-9 px-4 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
@@ -240,6 +223,15 @@ export default function FamiliaPage() {
             )}
           </div>
         </main>
+
+        {/* Modal de edição */}
+        <EditFamilyModal
+          family={family}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveFamily}
+          isLoading={isUpdating}
+        />
       </div>
     </div>
   )
