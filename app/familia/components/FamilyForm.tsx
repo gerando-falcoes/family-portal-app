@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/components/ui/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, Phone, Mail, Lock, DollarSign, MapPin, Loader2 } from 'lucide-react'
+import { CheckCircle, Phone, Mail, Lock, DollarSign, MapPin, Loader2, Users } from 'lucide-react'
 
 const incomeRanges = [
   { value: "ate-1000", label: "Até R$ 1.000" },
@@ -52,30 +52,23 @@ const brazilianStates = [
 ];
 
 const formSchema = z.object({
+  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
   contacts: z.object({
     phone: z.string().min(10, "Telefone deve ter no mínimo 10 dígitos").regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, "Formato inválido: (11) 99999-9999"),
-    whatsapp: z.string().min(10, "WhatsApp deve ter no mínimo 10 dígitos").regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, "Formato inválido: (11) 99999-9999"),
-    email: z.string().email("Email inválido"),
-  }),
-  access: z.object({
-    password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "A senha deve conter ao menos uma letra maiúscula, uma minúscula e um número"),
-    confirmPassword: z.string(),
+    email: z.string().email("Email inválido").optional().or(z.literal("")),
   }),
   socioeconomic: z.object({
     incomeRange: z.string().min(1, "Faixa de renda é obrigatória"),
     familySize: z.coerce.number().min(1, "Tamanho da família deve ser no mínimo 1").max(20, "Máximo de 20 pessoas"),
-    numberOfChildren: z.coerce.number().min(0, "Número de crianças não pode ser negativo").max(15, "Máximo de 15 crianças"),
   }),
   address: z.object({
+    cep: z.string().optional(),
     street: z.string().min(5, "Rua deve ter no mínimo 5 caracteres"),
     neighborhood: z.string().min(2, "Bairro deve ter no mínimo 2 caracteres"),
     city: z.string().min(2, "Cidade deve ter no mínimo 2 caracteres"),
     state: z.string().min(1, "Estado é obrigatório"),
     referencePoint: z.string().optional(),
   }),
-}).refine((data) => data.access.password === data.access.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["access", "confirmPassword"],
 });
 
 interface FamilyFormProps {
@@ -86,16 +79,14 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      contacts: { email: '', phone: '', whatsapp: '' },
-      access: { password: '', confirmPassword: '' },
-      socioeconomic: { incomeRange: '', familySize: 1, numberOfChildren: 0 },
-      address: { street: '', neighborhood: '', city: '', state: '', referencePoint: '' },
+      name: '',
+      contacts: { email: '', phone: '' },
+      socioeconomic: { incomeRange: '', familySize: 1 },
+      address: { cep: '', street: '', neighborhood: '', city: '', state: '', referencePoint: '' },
     },
   });
 
@@ -108,20 +99,43 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  // Função para formatar CEP
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  // Função para buscar endereço por CEP
+  const fetchAddressByCEP = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        form.setValue('address.street', data.logradouro || '');
+        form.setValue('address.neighborhood', data.bairro || '');
+        form.setValue('address.city', data.localidade || '');
+        form.setValue('address.state', data.uf || '');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
+
   // Calcular progresso baseado nos campos preenchidos
   const calculateProgress = () => {
     const values = form.getValues();
-    const totalFields = 12; // Total de campos obrigatórios
+    const totalFields = 7; // Total de campos obrigatórios
     let filledFields = 0;
 
-    if (values.contacts.email) filledFields++;
+    if (values.name) filledFields++;
     if (values.contacts.phone) filledFields++;
-    if (values.contacts.whatsapp) filledFields++;
-    if (values.access.password) filledFields++;
-    if (values.access.confirmPassword) filledFields++;
     if (values.socioeconomic.incomeRange) filledFields++;
     if (values.socioeconomic.familySize > 0) filledFields++;
-    if (values.socioeconomic.numberOfChildren >= 0) filledFields++;
     if (values.address.street) filledFields++;
     if (values.address.neighborhood) filledFields++;
     if (values.address.city) filledFields++;
@@ -140,8 +154,6 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: values.contacts.email,
-        password: values.access.password,
         familyData: values,
       }),
     });
@@ -149,7 +161,7 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
     setIsLoading(false);
 
     if (response.ok) {
-      toast({ title: "Sucesso!", description: "Família e usuário criados com sucesso." });
+      toast({ title: "Sucesso!", description: "Família cadastrada com sucesso." });
       onCancel(); 
     } else {
       const errorData = await response.json();
@@ -174,26 +186,22 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
             {/* Coluna da Esquerda */}
             <div className="space-y-8">
-              {/* Seção de Contatos */}
+              {/* Seção de Informações Básicas */}
               <div className="space-y-5">
                 <div className="pb-3 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Phone className="h-5 w-5 text-gray-600" />
-                    Informações de Contato
+                    <Users className="h-5 w-5 text-gray-600" />
+                    Informações da Família
                   </h3>
                 </div>
                 
-                <FormField control={form.control} name="contacts.phone" render={({ field }) => (
+                <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Telefone</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Nome da Família</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="(11) 99999-9999" 
+                        placeholder="Ex: Família Silva" 
                         {...field}
-                        onChange={(e) => {
-                          const formatted = formatPhone(e.target.value);
-                          field.onChange(formatted);
-                        }}
                         className="border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                       />
                     </FormControl>
@@ -201,9 +209,9 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                   </FormItem>
                 )} />
                 
-                <FormField control={form.control} name="contacts.whatsapp" render={({ field }) => (
+                <FormField control={form.control} name="contacts.phone" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">WhatsApp</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Telefone/WhatsApp</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="(11) 99999-9999" 
@@ -221,7 +229,7 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 
                 <FormField control={form.control} name="contacts.email" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Email de Acesso</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Email (Opcional)</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
@@ -235,47 +243,6 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                 )} />
               </div>
 
-              {/* Seção de Acesso */}
-              <div className="space-y-5">
-                <div className="pb-3 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-gray-600" />
-                    Dados de Acesso
-                  </h3>
-                </div>
-                
-                <FormField control={form.control} name="access.password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Senha</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        {...field} 
-                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                
-                <FormField control={form.control} name="access.confirmPassword" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Confirmar Senha</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="password" 
-                        {...field} 
-                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-            {/* Coluna da Direita */}
-            <div className="space-y-8">
               {/* Seção Socioeconômica */}
               <div className="space-y-5">
                 <div className="pb-3 border-b border-gray-200">
@@ -306,41 +273,26 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                   </FormItem>
                 )} />
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="socioeconomic.familySize" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Tamanho da Família</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="20" 
-                          {...field} 
-                          className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  
-                  <FormField control={form.control} name="socioeconomic.numberOfChildren" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Nº de Crianças</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          max="15" 
-                          {...field} 
-                          className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
+                <FormField control={form.control} name="socioeconomic.familySize" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Tamanho da Família</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max="20" 
+                        {...field} 
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
               </div>
+            </div>
 
+            {/* Coluna da Direita */}
+            <div className="space-y-8">
               {/* Seção de Endereço */}
               <div className="space-y-5">
                 <div className="pb-3 border-b border-gray-200">
@@ -349,6 +301,29 @@ export function FamilyForm({ onCancel }: FamilyFormProps) {
                     Endereço
                   </h3>
                 </div>
+                
+                <FormField control={form.control} name="address.cep" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">CEP (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="12345-678" 
+                        {...field}
+                        onChange={(e) => {
+                          const formatted = formatCEP(e.target.value);
+                          field.onChange(formatted);
+                          
+                          // Buscar endereço quando CEP for completo
+                          if (formatted.replace(/\D/g, '').length === 8) {
+                            fetchAddressByCEP(formatted);
+                          }
+                        }}
+                        className="border-gray-300 focus:border-gray-900 focus:ring-gray-900" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 
                 <FormField control={form.control} name="address.street" render={({ field }) => (
                   <FormItem>
