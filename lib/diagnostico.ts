@@ -68,6 +68,12 @@ export class DiagnosticoService {
     return responses ? JSON.parse(responses) : {};
   }
 
+  static clearResponses(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('diagnostico_responses');
+    }
+  }
+
   static calculateScore(responses: Record<string, boolean>): number {
     const totalQuestions = diagnosticoQuestions.length;
     const positiveAnswers = Object.values(responses).filter(Boolean).length;
