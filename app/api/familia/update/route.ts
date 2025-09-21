@@ -29,14 +29,14 @@ export async function PUT(request: NextRequest) {
     let familyId: string | null = null;
     
     // Tentar buscar diretamente na tabela families pelo email
-    const { data: familyData, error: familyError } = await supabaseServerClient
+    const { data: familyRecord, error: familyError } = await supabaseServerClient
       .from('families')
       .select('id')
       .eq('email', user.email)
       .single();
 
-    if (familyData?.id) {
-      familyId = familyData.id;
+    if (familyRecord?.id) {
+      familyId = familyRecord.id;
     } else {
       // Se não encontrou na tabela families, tentar na family_overview
       const { data: overviewData, error: overviewError } = await supabaseServerClient
