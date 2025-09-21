@@ -7,22 +7,31 @@ import { AuthService } from '@/lib/auth'
 import { useToast } from '@/hooks/use-toast'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [cpf, setCpf] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
+  // Função para formatar CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const user = await AuthService.login(email, password)
+      const user = await AuthService.login(cpf, password)
       if (user) {
         toast({ title: "Login realizado com sucesso!", description: "Redirecionando..." })
         router.push('/familia')
       } else {
-        toast({ title: "Erro no login", description: "Email ou senha incorretos.", variant: "destructive" })
+        toast({ title: "Erro no login", description: "CPF, senha incorretos ou usuário não aprovado.", variant: "destructive" })
       }
     } catch (error) {
       toast({ title: "Erro no login", description: "Ocorreu um erro inesperado.", variant: "destructive" })
@@ -48,15 +57,18 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  E-mail
+                <label htmlFor="cpf" className="text-sm font-medium text-gray-700">
+                  CPF
                 </label>
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="seuemail@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="cpf"
+                  type="text"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={(e) => {
+                    const formatted = formatCPF(e.target.value);
+                    setCpf(formatted);
+                  }}
                   required
                   className="w-full h-12 bg-gray-50 border-2 border-gray-200 focus:border-blue-500 focus:bg-white transition-all duration-200 rounded-lg px-4"
                 />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowserClient } from '@/lib/supabase/browser';
+import { AuthService } from '@/lib/auth';
 import type { Family, DiagnoseAssessment } from '@/lib/types';
 
 interface UseFamilyDataReturn {
@@ -27,19 +28,19 @@ export function useFamilyData(): UseFamilyDataReturn {
       setIsLoading(true);
       setError(null);
 
-      // Verificar se o usuário está autenticado
-      const { data: { session }, error: sessionError } = await supabaseBrowserClient.auth.getSession();
+      // Verificar se o usuário está autenticado com nosso sistema customizado
+      const customSession = await AuthService.getSession();
       
-      if (sessionError || !session?.user?.email) {
+      if (!customSession?.user?.cpf) {
         setError('Usuário não autenticado');
         router.push('/');
         return;
       }
 
-      // Buscar dados da família com token de autenticação
+      // Buscar dados da família com token customizado
       const response = await fetch('/api/familia/get', {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${customSession.access_token}`,
           'Content-Type': 'application/json',
         },
       });

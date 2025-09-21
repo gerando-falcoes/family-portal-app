@@ -10,38 +10,105 @@ function getSupabaseClient() {
 
 export const supabase = getSupabaseClient()
 
-export class AuthService {
-  static async login(email: string, password: string): Promise<User | null> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+// Interface para sessão customizada
+interface CustomSession {
+  user: User
+  access_token: string
+  expires_at: number
+}
 
-      if (error) {
-        console.error('Erro de autenticação:', error.message)
+// Gerenciamento de sessão no localStorage
+class SessionManager {
+  private static readonly SESSION_KEY = 'portal_familia_session'
+
+  static setSession(session: CustomSession): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(this.SESSION_KEY, JSON.stringify(session))
+    }
+  }
+
+  static getSession(): CustomSession | null {
+    if (typeof window !== 'undefined') {
+      const sessionData = localStorage.getItem(this.SESSION_KEY)
+      if (sessionData) {
+        const session = JSON.parse(sessionData)
+        // Verificar se a sessão não expirou
+        if (session.expires_at > Date.now()) {
+          return session
+        } else {
+          this.clearSession()
+        }
+      }
+    }
+    return null
+  }
+
+  static clearSession(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(this.SESSION_KEY)
+    }
+  }
+
+  static generateToken(): string {
+    return 'custom_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+  }
+}
+
+export class AuthService {
+  static async login(cpf: string, password: string): Promise<User | null> {
+    try {
+      // Buscar usuário na tabela profiles pelo CPF
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('cpf', cpf)
+        .eq('role', 'familia')
+        .single()
+
+      if (profileError || !profileData) {
+        console.error('CPF não encontrado:', profileError?.message)
         return null
       }
 
-      if (data.user) {
-        // Buscar dados da família usando o email do usuário
-        const { data: familyData, error: familyError } = await supabase
-          .from('families')
-          .select('*')
-          .eq('email', email)
-          .single()
-
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email!,
-          password: '', // Por segurança, não armazenamos a senha
-          familyId: familyData?.id || '',
-        }
-
-        return user
+      // Verificar status de aprovação
+      if (profileData.status_aprovacao !== 'aprovado') {
+        console.error('Usuário não aprovado. Status:', profileData.status_aprovacao)
+        return null
       }
 
-      return null
+      // Verificar senha (comparação direta - em produção deveria usar hash)
+      if (profileData.senha !== password) {
+        console.error('Senha incorreta')
+        return null
+      }
+
+      // Buscar dados da família usando o CPF
+      const { data: familyData, error: familyError } = await supabase
+        .from('families')
+        .select('*')
+        .eq('cpf', cpf)
+        .single()
+
+      const user: User = {
+        id: profileData.id,
+        email: profileData.email || '', // Pode ser vazio agora
+        cpf: profileData.cpf,
+        password: '', // Por segurança, não armazenamos a senha
+        familyId: familyData?.id || '',
+        name: profileData.name,
+        role: profileData.role,
+      }
+
+      // Criar sessão customizada
+      const session: CustomSession = {
+        user,
+        access_token: SessionManager.generateToken(),
+        expires_at: Date.now() + (24 * 60 * 60 * 1000), // 24 horas
+      }
+
+      SessionManager.setSession(session)
+
+      return user
     } catch (error) {
       console.error('Erro no login:', error)
       return null
@@ -49,27 +116,29 @@ export class AuthService {
   }
 
   static async logout(): Promise<void> {
-    await supabase.auth.signOut()
+    SessionManager.clearSession()
   }
 
   static async getCurrentUser(): Promise<User | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const session = SessionManager.getSession()
       
-      if (user) {
-        // Buscar dados da família usando o email do usuário
-        const { data: familyData, error: familyError } = await supabase
-          .from('families')
-          .select('*')
-          .eq('email', user.email!)
+      if (session && session.user) {
+        // Verificar se o usuário ainda está aprovado
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('status_aprovacao')
+          .eq('cpf', session.user.cpf)
+          .eq('role', 'familia')
           .single()
 
-        return {
-          id: user.id,
-          email: user.email!,
-          password: '',
-          familyId: familyData?.id || '',
+        if (profileData?.status_aprovacao !== 'aprovado') {
+          // Se não está mais aprovado, fazer logout
+          this.logout()
+          return null
         }
+
+        return session.user
       }
 
       return null
@@ -84,8 +153,12 @@ export class AuthService {
     return user !== null
   }
 
-  static async getSession() {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session
+  static async getSession(): Promise<CustomSession | null> {
+    return SessionManager.getSession()
+  }
+
+  static async getAccessToken(): Promise<string | null> {
+    const session = SessionManager.getSession()
+    return session?.access_token || null
   }
 }

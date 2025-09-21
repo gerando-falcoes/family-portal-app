@@ -7,13 +7,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import type { IncomeRange, BrazilianState } from "@/lib/types"
 import { Loader2, User, DollarSign, MapPin, Mail, Lock, Plus, Trash2, Users } from "lucide-react"
 
-const incomeRanges: IncomeRange[] = [ "Até R$ 500", "R$ 501 - R$ 1.000", "R$ 1.001 - R$ 1.500", "R$ 1.501 - R$ 2.000", "R$ 2.001 - R$ 3.000", "Acima de R$ 3.000" ]
+const incomeRanges: IncomeRange[] = [ 
+  "Até R$ 1.412,00", 
+  "De R$ 1.412,01 a R$ 2.824,00", 
+  "De R$ 2.824,01 a R$ 4.236,00", 
+  "De R$ 4.236,01 a R$ 5.648,00", 
+  "Acima de R$ 5.648,00" 
+]
 const brazilianStates: BrazilianState[] = [ "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO" ]
 
 const familyRelations = [
@@ -582,22 +589,22 @@ const FormSelect: React.FC<{
   placeholder: string
   options: readonly string[]
   onChange: (id: string, value: string) => void 
-}> = ({ id, label, value, placeholder, options, onChange }) => (
-  <div className="space-y-2">
-    <Label htmlFor={id} className="text-sm font-medium text-gray-600">
-      {label}
-    </Label>
-    <Select value={value} onValueChange={(val) => onChange(id, val)}>
-      <SelectTrigger id={id} className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-)
+}> = ({ id, label, value, placeholder, options, onChange }) => {
+  const selectOptions = options.map(option => ({ value: option, label: option }))
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-sm font-medium text-gray-600">
+        {label}
+      </Label>
+      <SelectWithSearch
+        value={value}
+        onValueChange={(val) => onChange(id, val)}
+        placeholder={placeholder}
+        searchPlaceholder="Buscar opção..."
+        options={selectOptions}
+        className="h-11"
+      />
+    </div>
+  )
+}

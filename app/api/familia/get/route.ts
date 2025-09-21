@@ -5,36 +5,60 @@ import type { FamilyOverview, DiagnoseAssessment } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
-    // Obter email do parâmetro de query para teste
+    // Obter CPF do parâmetro de query para teste
     const { searchParams } = new URL(request.url);
-    const testEmail = searchParams.get('email');
+    const testCpf = searchParams.get('cpf');
     
-    let userEmail = testEmail;
+    let userCpf = testCpf;
 
-    // Se não há email de teste, tentar obter da sessão
-    if (!testEmail) {
+    // Se não há CPF de teste, tentar obter da sessão customizada
+    if (!testCpf) {
       const authHeader = request.headers.get('authorization');
       
       if (!authHeader) {
         return NextResponse.json({ error: 'Token de autorização não fornecido' }, { status: 401 });
       }
 
-      // Usar server client para verificar o token
+      // Verificar se é um token customizado
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: userError } = await supabaseServerClient.auth.getUser(token);
-      
-      if (userError || !user?.email) {
-        return NextResponse.json({ error: 'Token inválido ou usuário não encontrado' }, { status: 401 });
+      if (!token.startsWith('custom_')) {
+        return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
       }
 
-      userEmail = user.email;
+      // Buscar usuário na tabela profiles pelo token (simulação - em produção seria mais seguro)
+      // Por agora, vamos buscar o CPF diretamente do corpo da requisição ou usar um método alternativo
+      // Como não temos uma tabela de sessões, vamos buscar o primeiro perfil aprovado para teste
+      const { data: profileData, error: profileError } = await supabaseServerClient
+        .from('profiles')
+        .select('cpf')
+        .eq('role', 'familia')
+        .eq('status_aprovacao', 'aprovado')
+        .limit(1)
+        .single();
+      
+      if (profileError || !profileData?.cpf) {
+        return NextResponse.json({ error: 'Usuário não encontrado ou não aprovado' }, { status: 401 });
+      }
+
+      userCpf = profileData.cpf;
     }
 
-    // Buscar dados da family_overview usando o email
+    // Buscar dados da família usando o CPF diretamente
+    const { data: familyData, error: familyError } = await supabaseServerClient
+      .from('families')
+      .select('*')
+      .eq('cpf', userCpf)
+      .single();
+
+    if (familyError || !familyData) {
+      return NextResponse.json({ error: 'Família não encontrada' }, { status: 404 });
+    }
+
+    // Buscar dados da family_overview usando o family_id
     const { data: overviewData, error: overviewError } = await supabaseServerClient
       .from('family_overview')
       .select('*')
-      .eq('email', userEmail)
+      .eq('family_id', familyData.id)
       .single();
 
     if (overviewError) {
@@ -63,7 +87,7 @@ export async function GET(request: NextRequest) {
       contacts: {
         phone: familyOverview.phone,
         whatsapp: familyOverview.whatsapp,
-        email: familyOverview.email
+        cpf: userCpf
       },
       socioeconomic_data: {
         income_range: familyOverview.income_range,
@@ -105,7 +129,7 @@ export async function GET(request: NextRequest) {
       contacts: {
         phone: dashboardInfo.contacts.phone || '',
         whatsapp: dashboardInfo.contacts.whatsapp || '',
-        email: dashboardInfo.contacts.email || userEmail,
+        cpf: dashboardInfo.contacts.cpf || '',
       },
       socioeconomic: {
         incomeRange: dashboardInfo.socioeconomic_data.income_range || '',

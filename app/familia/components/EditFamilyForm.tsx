@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SelectWithSearch } from '@/components/ui/select-with-search'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/components/ui/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -14,12 +15,11 @@ import { CheckCircle, Phone, Mail, DollarSign, MapPin, Loader2, Users } from 'lu
 import type { Family } from '@/lib/types'
 
 const incomeRanges = [
-  { value: "Até R$ 500", label: "Até R$ 500" },
-  { value: "R$ 501 - R$ 1.000", label: "R$ 501 - R$ 1.000" },
-  { value: "R$ 1.001 - R$ 1.500", label: "R$ 1.001 - R$ 1.500" },
-  { value: "R$ 1.501 - R$ 2.000", label: "R$ 1.501 - R$ 2.000" },
-  { value: "R$ 2.001 - R$ 3.000", label: "R$ 2.001 - R$ 3.000" },
-  { value: "Acima de R$ 3.000", label: "Acima de R$ 3.000" },
+  { value: "Até R$ 1.412,00", label: "Até R$ 1.412,00" },
+  { value: "De R$ 1.412,01 a R$ 2.824,00", label: "De R$ 1.412,01 a R$ 2.824,00" },
+  { value: "De R$ 2.824,01 a R$ 4.236,00", label: "De R$ 2.824,01 a R$ 4.236,00" },
+  { value: "De R$ 4.236,01 a R$ 5.648,00", label: "De R$ 4.236,01 a R$ 5.648,00" },
+  { value: "Acima de R$ 5.648,00", label: "Acima de R$ 5.648,00" },
 ];
 
 const brazilianStates = [
@@ -303,20 +303,16 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                 <FormField control={form.control} name="socioeconomic.incomeRange" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Faixa de Renda</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
-                          <SelectValue placeholder="Selecione sua faixa de renda" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {incomeRanges.map((income) => (
-                          <SelectItem key={income.value} value={income.value}>
-                            {income.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SelectWithSearch
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Selecione sua faixa de renda"
+                        searchPlaceholder="Buscar faixa de renda..."
+                        options={incomeRanges}
+                        className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -439,20 +435,16 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                 <FormField control={form.control} name="address.state" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Estado</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                          <SelectValue placeholder="Selecione o estado" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {brazilianStates.map((state) => (
-                          <SelectItem key={state.value} value={state.value}>
-                            {state.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SelectWithSearch
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Selecione o estado"
+                        searchPlaceholder="Buscar estado..."
+                        options={brazilianStates}
+                        className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

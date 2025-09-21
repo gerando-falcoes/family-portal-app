@@ -6,6 +6,7 @@ import { Phone, MapPin, Users, LogOut, TrendingUp, AlertTriangle, Target, Loader
 import { EditFamilyModal } from "./components/EditFamilyModal"
 import { useFamilyData } from "@/hooks/use-family-data"
 import { supabaseBrowserClient } from "@/lib/supabase/browser"
+import { AuthService } from "@/lib/auth"
 import { useToast } from "@/components/ui/use-toast"
 import type { Family } from "@/lib/types"
 
@@ -54,8 +55,8 @@ export default function FamiliaPage() {
     try {
       setIsUpdating(true)
 
-      // Obter token de autenticação
-      const { data: { session } } = await supabaseBrowserClient.auth.getSession()
+      // Obter token de autenticação customizado
+      const session = await AuthService.getSession()
       
       if (!session?.access_token) {
         throw new Error('Usuário não autenticado')
@@ -242,7 +243,7 @@ const fieldLabels: { [key: string]: string } = {
   // Contatos
   'phone': 'Telefone',
   'whatsapp': 'WhatsApp',
-  'email': 'E-mail',
+  'cpf': 'CPF',
   
   // Dados Socioeconômicos
   'incomeRange': 'Faixa de Renda',

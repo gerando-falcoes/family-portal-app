@@ -1,8 +1,11 @@
 export interface User {
   id: string
   email: string
+  cpf: string
   password: string
   familyId?: string
+  name?: string
+  role?: string
 }
 
 export interface Family {
@@ -13,7 +16,7 @@ export interface Family {
   contacts: {
     phone: string
     whatsapp: string
-    email: string
+    cpf: string
   }
   socioeconomic: {
     incomeRange: string
@@ -122,12 +125,11 @@ export interface FamilyOverview {
 }
 
 export type IncomeRange =
-  | "Até R$ 500"
-  | "R$ 501 - R$ 1.000"
-  | "R$ 1.001 - R$ 1.500"
-  | "R$ 1.501 - R$ 2.000"
-  | "R$ 2.001 - R$ 3.000"
-  | "Acima de R$ 3.000"
+  | "Até R$ 1.412,00"
+  | "De R$ 1.412,01 a R$ 2.824,00"
+  | "De R$ 2.824,01 a R$ 4.236,00"
+  | "De R$ 4.236,01 a R$ 5.648,00"
+  | "Acima de R$ 5.648,00"
 
 export type BrazilianState =
   | "AC"
