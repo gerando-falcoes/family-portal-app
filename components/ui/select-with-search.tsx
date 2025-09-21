@@ -39,6 +39,13 @@ export function SelectWithSearch({
     )
   }, [options, searchTerm])
 
+  // Sincronizar valor externo com estado interno
+  React.useEffect(() => {
+    if (value !== undefined && value !== selectedValue) {
+      setSelectedValue(value)
+    }
+  }, [value, selectedValue])
+
   // Encontrar o label da opção selecionada
   const selectedOption = options.find(option => option.value === selectedValue)
 

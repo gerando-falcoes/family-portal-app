@@ -589,22 +589,22 @@ const FormSelect: React.FC<{
   placeholder: string
   options: readonly string[]
   onChange: (id: string, value: string) => void 
-}> = ({ id, label, value, placeholder, options, onChange }) => {
-  const selectOptions = options.map(option => ({ value: option, label: option }))
-  
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id} className="text-sm font-medium text-gray-600">
-        {label}
-      </Label>
-      <SelectWithSearch
-        value={value}
-        onValueChange={(val) => onChange(id, val)}
-        placeholder={placeholder}
-        searchPlaceholder="Buscar opção..."
-        options={selectOptions}
-        className="h-11"
-      />
-    </div>
-  )
-}
+}> = ({ id, label, value, placeholder, options, onChange }) => (
+  <div className="space-y-2">
+    <Label htmlFor={id} className="text-sm font-medium text-gray-600">
+      {label}
+    </Label>
+    <Select value={value} onValueChange={(val) => onChange(id, val)}>
+      <SelectTrigger id={id} className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+)

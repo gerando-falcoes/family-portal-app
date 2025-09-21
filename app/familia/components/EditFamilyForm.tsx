@@ -303,16 +303,20 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                 <FormField control={form.control} name="socioeconomic.incomeRange" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Faixa de Renda</FormLabel>
-                    <FormControl>
-                      <SelectWithSearch
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder="Selecione sua faixa de renda"
-                        searchPlaceholder="Buscar faixa de renda..."
-                        options={incomeRanges}
-                        className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500"
-                      />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                          <SelectValue placeholder="Selecione sua faixa de renda" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {incomeRanges.map((income) => (
+                          <SelectItem key={income.value} value={income.value}>
+                            {income.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -435,16 +439,20 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                 <FormField control={form.control} name="address.state" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Estado</FormLabel>
-                    <FormControl>
-                      <SelectWithSearch
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder="Selecione o estado"
-                        searchPlaceholder="Buscar estado..."
-                        options={brazilianStates}
-                        className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                      />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectValue placeholder="Selecione o estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
