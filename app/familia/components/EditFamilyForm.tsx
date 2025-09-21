@@ -391,7 +391,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                 </FormItem>
               )} />
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="lg:col-span-2">
                   <FormField control={form.control} name="address.street" render={({ field }) => (
                     <FormItem>
@@ -482,7 +482,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
           )}
 
           {/* Botões de Ação */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-4 justify-end">
               <Button 
                 type="button" 
