@@ -25,9 +25,40 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido ou usuário não encontrado' }, { status: 401 });
     }
 
-    // Preparar dados para atualização (exceto email e senha)
-    const updateData = {
+    // Primeiro, tentar buscar o family_id usando o email na tabela families
+    let familyId: string | null = null;
+    
+    // Tentar buscar diretamente na tabela families pelo email
+    const { data: familyData, error: familyError } = await supabaseServerClient
+      .from('families')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (familyData?.id) {
+      familyId = familyData.id;
+    } else {
+      // Se não encontrou na tabela families, tentar na family_overview
+      const { data: overviewData, error: overviewError } = await supabaseServerClient
+        .from('family_overview')
+        .select('family_id')
+        .eq('email', user.email)
+        .single();
+
+      if (overviewData?.family_id) {
+        familyId = overviewData.family_id;
+      }
+    }
+
+    if (!familyId) {
+      console.error('Erro ao buscar family_id para email:', user.email);
+      return NextResponse.json({ error: 'Família não encontrada' }, { status: 404 });
+    }
+
+    // Preparar dados para atualização na tabela families
+    const familyUpdateData = {
       name: familyData.name || `Família ${user.email.split('@')[0]}`,
+      cpf: familyData.cpf || null,
       phone: familyData.contacts?.phone || null,
       whatsapp: familyData.contacts?.whatsapp || null,
       income_range: familyData.socioeconomic?.incomeRange || null,
@@ -41,17 +72,33 @@ export async function PUT(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    // Atualizar dados na tabela families
-    const { data: updatedFamily, error: updateError } = await supabaseServerClient
+    // Atualizar dados na tabela families usando o family_id
+    const { data: updatedFamily, error: familyUpdateError } = await supabaseServerClient
       .from('families')
-      .update(updateData)
-      .eq('email', user.email)
+      .update(familyUpdateData)
+      .eq('id', familyId)
       .select()
       .single();
 
-    if (updateError) {
-      console.error('Erro ao atualizar família:', updateError);
+    if (familyUpdateError) {
+      console.error('Erro ao atualizar família:', familyUpdateError);
       return NextResponse.json({ error: 'Erro ao atualizar dados da família' }, { status: 500 });
+    }
+
+    // Também atualizar dados na tabela profiles se necessário
+    const profileUpdateData = {
+      phone: familyData.contacts?.phone || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: profileUpdateError } = await supabaseServerClient
+      .from('profiles')
+      .update(profileUpdateData)
+      .eq('email', user.email);
+
+    if (profileUpdateError) {
+      console.warn('Erro ao atualizar perfil (não crítico):', profileUpdateError);
+      // Não falha a operação se o perfil não for atualizado
     }
 
     // Retornar sucesso

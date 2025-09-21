@@ -5,19 +5,30 @@ export async function POST(request: Request) {
   try {
     // 1. Obter os dados do formulário
     const body = await request.json();
-    const { familyData } = body;
+    const { password, familyData } = body;
 
-    if (!familyData) {
-      return NextResponse.json({ error: 'Dados da família são obrigatórios' }, { status: 400 });
+    if (!password || !familyData) {
+      return NextResponse.json({ error: 'Senha e dados da família são obrigatórios' }, { status: 400 });
     }
 
-    // 2. Validar campos obrigatórios (incluindo CPF)
+    // 2. Validar campos obrigatórios da família (incluindo CPF)
     if (!familyData.name || !familyData.cpf || !familyData.contacts?.phone || !familyData.address?.street || 
         !familyData.address?.neighborhood || !familyData.address?.city || !familyData.address?.state) {
-      return NextResponse.json({ error: 'Campos obrigatórios não preenchidos' }, { status: 400 });
+      return NextResponse.json({ error: 'Campos obrigatórios da família não preenchidos (nome, CPF, telefone, endereço)' }, { status: 400 });
     }
 
-    // 3. Salvar os dados da família na tabela 'families'
+    // 3. Validar membros da família
+    if (!familyData.members || familyData.members.length === 0) {
+      return NextResponse.json({ error: 'É necessário cadastrar pelo menos um membro da família' }, { status: 400 });
+    }
+
+    // Verificar se há pelo menos um responsável
+    const hasResponsavel = familyData.members.some((member: any) => member.is_responsavel);
+    if (!hasResponsavel) {
+      return NextResponse.json({ error: 'É necessário marcar pelo menos um membro como responsável' }, { status: 400 });
+    }
+
+    // 4. Salvar os dados da família na tabela 'families'
     const familyRecord = {
       name: familyData.name,
       cpf: familyData.cpf,
@@ -30,7 +41,7 @@ export async function POST(request: Request) {
       state: familyData.address.state,
       reference_point: familyData.address.referencePoint || null,
       income_range: familyData.socioeconomic.incomeRange || null,
-      family_size: familyData.socioeconomic.familySize || 1,
+      family_size: familyData.socioeconomic.familySize || familyData.members.length,
       children_count: 0, // Removido do formulário, manter como 0
       status: 'ativo',
       created_at: new Date().toISOString(),
@@ -48,12 +59,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro ao salvar dados da família' }, { status: 500 });
     }
 
-    // 4. Criar perfil na tabela 'profiles'
+    // 5. Salvar membros da família na tabela 'family_members'
+    const membersToInsert = familyData.members.map((member: any) => ({
+      family_id: familyInsertData.id,
+      nome: member.nome,
+      idade: member.idade,
+      cpf: member.cpf || null,
+      esta_empregado: member.esta_empregado || false,
+      relacao_familia: member.relacao_familia,
+      is_responsavel: member.is_responsavel || false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { data: membersInsertData, error: membersError } = await supabaseServerClient
+      .from('family_members')
+      .insert(membersToInsert)
+      .select();
+
+    if (membersError) {
+      console.error('Erro ao inserir membros da família:', membersError);
+      // Se falhar ao criar os membros, não falha o cadastro da família
+      // mas loga o erro para investigação
+      console.warn('Família criada mas membros não foram criados:', familyInsertData.id);
+    }
+
+    // 6. Criar perfil na tabela 'profiles' (com senha)
     const profileRecord = {
       name: familyData.name,
       cpf: familyData.cpf,
       phone: familyData.contacts.phone,
-      email: familyData.contacts.email || null, // Email é opcional
+      email: familyData.contacts.email || null, // Email opcional
+      senha: password, // Senha salva diretamente na tabela profiles
       role: 'familia',
       status_aprovacao: 'pendente',
       created_at: new Date().toISOString(),
@@ -73,10 +110,11 @@ export async function POST(request: Request) {
       console.warn('Família criada mas perfil não foi criado:', familyInsertData.id);
     }
 
-    // 5. Retornar sucesso
+    // 7. Retornar sucesso
     return NextResponse.json({ 
-      message: 'Família cadastrada com sucesso!', 
+      message: 'Família, membros e perfil criados com sucesso!', 
       family: familyInsertData,
+      members: membersInsertData || [],
       profile: profileInsertData || null
     });
 

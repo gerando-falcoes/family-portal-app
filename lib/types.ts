@@ -8,6 +8,7 @@ export interface User {
 export interface Family {
   id: string
   name: string
+  cpf?: string
   status: "Ativa" | "Inativa"
   contacts: {
     phone: string
@@ -20,6 +21,7 @@ export interface Family {
     numberOfChildren: number
   }
   address: {
+    cep?: string
     street: string
     neighborhood: string
     city: string

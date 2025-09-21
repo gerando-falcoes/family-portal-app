@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/components/ui/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CheckCircle, Phone, Mail, DollarSign, MapPin, Loader2 } from 'lucide-react'
+import { CheckCircle, Phone, Mail, DollarSign, MapPin, Loader2, Users } from 'lucide-react'
 import type { Family } from '@/lib/types'
 
 const incomeRanges = [
@@ -53,6 +53,8 @@ const brazilianStates = [
 ];
 
 const formSchema = z.object({
+  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+  cpf: z.string().min(11, "CPF deve ter 11 dígitos").regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato inválido: 000.000.000-00"),
   contacts: z.object({
     phone: z.string().min(10, "Telefone deve ter no mínimo 10 dígitos"),
     whatsapp: z.string().min(10, "WhatsApp deve ter no mínimo 10 dígitos"),
@@ -64,6 +66,7 @@ const formSchema = z.object({
     numberOfChildren: z.coerce.number().min(0, "Número de crianças não pode ser negativo").max(15, "Máximo de 15 crianças"),
   }),
   address: z.object({
+    cep: z.string().optional(),
     street: z.string().min(5, "Rua deve ter no mínimo 5 caracteres"),
     neighborhood: z.string().min(2, "Bairro deve ter no mínimo 2 caracteres"),
     city: z.string().min(2, "Cidade deve ter no mínimo 2 caracteres"),
@@ -86,6 +89,8 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: family.name || '',
+      cpf: family.cpf || '',
       contacts: {
         email: family.contacts.email || '',
         phone: family.contacts.phone || '',
@@ -97,6 +102,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
         numberOfChildren: family.socioeconomic.numberOfChildren || 0,
       },
       address: {
+        cep: family.address.cep || '',
         street: family.address.street || '',
         neighborhood: family.address.neighborhood || '',
         city: family.address.city || '',
@@ -115,11 +121,49 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  // Função para formatar CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  // Função para formatar CEP
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  // Função para buscar endereço por CEP
+  const fetchAddressByCEP = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        form.setValue('address.street', data.logradouro || '');
+        form.setValue('address.neighborhood', data.bairro || '');
+        form.setValue('address.city', data.localidade || '');
+        form.setValue('address.state', data.uf || '');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setServerError(null);
     
     // Preparar dados para envio
     const updatedData: Partial<Family> = {
+      name: values.name,
+      cpf: values.cpf,
       contacts: values.contacts,
       socioeconomic: values.socioeconomic,
       address: values.address,
@@ -129,20 +173,64 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
   };
 
   return (
-    <div className="space-y-8">
+    <div className="bg-gray-50 p-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           
+          {/* Informações Básicas da Família */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Informações da Família</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">Nome da Família</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Ex: Família Silva" 
+                      {...field}
+                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              <FormField control={form.control} name="cpf" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">CPF da Família</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="000.000.000-00" 
+                      {...field}
+                      onChange={(e) => {
+                        const formatted = formatCPF(e.target.value);
+                        field.onChange(formatted);
+                      }}
+                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+          </div>
+
           {/* Seção de Contatos */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                 <Phone className="h-4 w-4 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">Informações de Contato</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <FormField control={form.control} name="contacts.phone" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700">Telefone</FormLabel>
@@ -180,7 +268,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
               )} />
             </div>
             
-            <div className="mt-6">
+            <div className="mt-4">
               <FormField control={form.control} name="contacts.email" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
@@ -202,22 +290,22 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
           </div>
 
           {/* Seção Socioeconômica */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-blue-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-orange-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">Dados Socioeconômicos</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
                 <FormField control={form.control} name="socioeconomic.incomeRange" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Faixa de Renda</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <SelectTrigger className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500">
                           <SelectValue placeholder="Selecione sua faixa de renda" />
                         </SelectTrigger>
                       </FormControl>
@@ -244,7 +332,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                       max="20" 
                       {...field} 
                       placeholder="Ex: 4"
-                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                      className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500" 
                     />
                   </FormControl>
                   <FormMessage />
@@ -261,7 +349,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                       max="15" 
                       {...field} 
                       placeholder="Ex: 2"
-                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500" 
+                      className="h-11 border-gray-300 focus:border-orange-500 focus:ring-orange-500" 
                     />
                   </FormControl>
                   <FormMessage />
@@ -271,22 +359,110 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
           </div>
 
           {/* Seção de Endereço */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                 <MapPin className="h-4 w-4 text-purple-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">Endereço</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <FormField control={form.control} name="address.street" render={({ field }) => (
+            <div className="space-y-4">
+              <FormField control={form.control} name="address.cep" render={({ field }) => (
+                <FormItem className="max-w-xs">
+                  <FormLabel className="text-sm font-medium text-gray-700">CEP <span className="text-gray-400">(Opcional)</span></FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="12345-678" 
+                      {...field}
+                      onChange={(e) => {
+                        const formatted = formatCEP(e.target.value);
+                        field.onChange(formatted);
+                        
+                        // Buscar endereço quando CEP for completo
+                        if (formatted.replace(/\D/g, '').length === 8) {
+                          fetchAddressByCEP(formatted);
+                        }
+                      }}
+                      className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="lg:col-span-2">
+                  <FormField control={form.control} name="address.street" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700">Rua e Número</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: Rua das Flores, 123" 
+                          {...field} 
+                          className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                
+                <FormField control={form.control} name="address.neighborhood" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Rua e Número</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Bairro</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="Ex: Rua das Flores, 123" 
+                        placeholder="Ex: Centro" 
+                        {...field} 
+                        className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="address.city" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Cidade</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: São Paulo" 
+                        {...field} 
+                        className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="address.state" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Estado</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
+                          <SelectValue placeholder="Selecione o estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField control={form.control} name="address.referencePoint" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Ponto de Referência <span className="text-gray-400">(Opcional)</span></FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: Próximo ao mercado" 
                         {...field} 
                         className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
                       />
@@ -295,72 +471,8 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
                   </FormItem>
                 )} />
               </div>
-              
-              <FormField control={form.control} name="address.neighborhood" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">Bairro</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Centro" 
-                      {...field} 
-                      className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="address.city" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">Cidade</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: São Paulo" 
-                      {...field} 
-                      className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="address.state" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">Estado</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500">
-                        <SelectValue placeholder="Selecione o estado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {brazilianStates.map((state) => (
-                        <SelectItem key={state.value} value={state.value}>
-                          {state.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="address.referencePoint" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">Ponto de Referência <span className="text-gray-400">(Opcional)</span></FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Próximo ao mercado" 
-                      {...field} 
-                      className="h-11 border-gray-300 focus:border-purple-500 focus:ring-purple-500" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
             </div>
           </div>
-              
 
           {serverError && (
             <Alert variant="destructive" className="rounded-xl border-red-200 bg-red-50">
@@ -370,7 +482,7 @@ export function EditFamilyForm({ family, onSave, onCancel, isLoading }: EditFami
           )}
 
           {/* Botões de Ação */}
-          <div className="bg-gray-50 rounded-xl p-6 border-t border-gray-200">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-4 justify-end">
               <Button 
                 type="button" 

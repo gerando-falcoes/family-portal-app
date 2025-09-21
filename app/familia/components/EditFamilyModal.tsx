@@ -24,22 +24,22 @@ export function EditFamilyModal({ family, isOpen, onClose, onSave, isLoading }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-white border-0 shadow-2xl rounded-2xl">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 -m-6 mb-8 p-6 rounded-t-2xl">
+      <DialogContent className="max-w-6xl h-[90vh] bg-white border-0 shadow-2xl rounded-2xl p-0 flex flex-col">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-t-2xl flex-shrink-0">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <Edit className="w-6 h-6 text-white" />
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-3">
+              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                <Edit className="w-5 h-5 text-white" />
               </div>
               Editar Informações da Família
             </DialogTitle>
-            <DialogDescription className="text-blue-100 mt-3 text-base">
+            <DialogDescription className="text-blue-100 mt-2 text-sm">
               Altere os dados abaixo e clique em salvar. O email não pode ser alterado por questões de segurança.
             </DialogDescription>
           </DialogHeader>
         </div>
         
-        <div className="px-1">
+        <div className="flex-1 overflow-y-auto">
           <EditFamilyForm 
             family={family} 
             onSave={onSave} 

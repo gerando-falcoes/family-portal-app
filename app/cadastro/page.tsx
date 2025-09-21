@@ -8,24 +8,43 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import type { IncomeRange, BrazilianState } from "@/lib/types"
-import { Loader2, User, DollarSign, MapPin } from "lucide-react"
+import { Loader2, User, DollarSign, MapPin, Mail, Lock, Plus, Trash2, Users } from "lucide-react"
 
 const incomeRanges: IncomeRange[] = [ "Até R$ 500", "R$ 501 - R$ 1.000", "R$ 1.001 - R$ 1.500", "R$ 1.501 - R$ 2.000", "R$ 2.001 - R$ 3.000", "Acima de R$ 3.000" ]
 const brazilianStates: BrazilianState[] = [ "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO" ]
+
+const familyRelations = [
+  "Pai", "Mãe", "Filho", "Filha", "Avô", "Avó", "Neto", "Neta", 
+  "Irmão", "Irmã", "Tio", "Tia", "Primo", "Prima", "Cunhado", "Cunhada", 
+  "Sogro", "Sogra", "Genro", "Nora", "Padrasto", "Madrasta", "Enteado", "Enteada", "Outro"
+]
+
+interface FamilyMember {
+  id: string
+  nome: string
+  idade: string
+  cpf: string
+  esta_empregado: boolean
+  relacao_familia: string
+  is_responsavel: boolean
+}
 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.15 } } }
 const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.5 } } }
 
 export default function CadastroPage() {
   const [formData, setFormData] = useState({ 
+    // Senha
+    password: "",
+    // Dados da família
     name: "", 
     cpf: "",
     phone: "", 
-    email: "", 
+    emailFamilia: "", 
     incomeRange: "" as IncomeRange | "", 
-    familySize: "", 
     cep: "",
     street: "", 
     neighborhood: "", 
@@ -33,6 +52,19 @@ export default function CadastroPage() {
     state: "" as BrazilianState | "", 
     referencePoint: "" 
   })
+  
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
+    {
+      id: "1",
+      nome: "",
+      idade: "",
+      cpf: "",
+      esta_empregado: false,
+      relacao_familia: "",
+      is_responsavel: true
+    }
+  ])
+  
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -50,6 +82,7 @@ export default function CadastroPage() {
 
   // Função para validar CPF
   const validateCPF = (cpf: string): boolean => {
+    if (!cpf) return true; // CPF pode ser vazio para alguns membros
     const cleanCPF = cpf.replace(/\D/g, '');
     if (cleanCPF.length !== 11) return false;
     
@@ -122,10 +155,49 @@ export default function CadastroPage() {
     }
   };
 
+  // Funções para gerenciar membros da família
+  const handleMemberChange = (memberId: string, field: keyof FamilyMember, value: string | boolean) => {
+    setFamilyMembers(prev => prev.map(member => 
+      member.id === memberId 
+        ? { ...member, [field]: field === 'cpf' ? formatCPF(value as string) : value }
+        : member
+    ));
+  };
+
+  const handleResponsavelChange = (memberId: string, isChecked: boolean) => {
+    setFamilyMembers(prev => prev.map(member => ({
+      ...member,
+      is_responsavel: member.id === memberId ? isChecked : false
+    })));
+  };
+
+  const addFamilyMember = () => {
+    const newMember: FamilyMember = {
+      id: Date.now().toString(),
+      nome: "",
+      idade: "",
+      cpf: "",
+      esta_empregado: false,
+      relacao_familia: "",
+      is_responsavel: false
+    };
+    setFamilyMembers(prev => [...prev, newMember]);
+  };
+
+  const removeFamilyMember = (memberId: string) => {
+    if (familyMembers.length <= 1) {
+      toast({ title: "Erro", description: "Deve haver pelo menos um membro na família.", variant: "destructive" });
+      return;
+    }
+    setFamilyMembers(prev => prev.filter(member => member.id !== memberId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    const requiredFields: (keyof typeof formData)[] = [ "name", "cpf", "phone", "incomeRange", "familySize", "street", "neighborhood", "city", "state" ]
+    
+    // Validar campos obrigatórios
+    const requiredFields: (keyof typeof formData)[] = [ "password", "name", "cpf", "phone", "incomeRange", "street", "neighborhood", "city", "state" ]
     const missingFields = requiredFields.filter((field) => !formData[field])
 
     if (missingFields.length > 0) {
@@ -134,9 +206,40 @@ export default function CadastroPage() {
       return
     }
 
-    // Validar CPF
+    // Validar CPF da família
     if (!validateCPF(formData.cpf)) {
-      toast({ title: "CPF inválido", description: "Por favor, insira um CPF válido.", variant: "destructive" })
+      toast({ title: "CPF inválido", description: "Por favor, insira um CPF válido para a família.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar membros da família
+    const invalidMembers = familyMembers.filter(member => !member.nome || !member.idade || !member.relacao_familia);
+    if (invalidMembers.length > 0) {
+      toast({ title: "Dados dos membros incompletos", description: "Por favor, preencha nome, idade e relação para todos os membros.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar CPFs dos membros
+    const invalidCPFs = familyMembers.filter(member => member.cpf && !validateCPF(member.cpf));
+    if (invalidCPFs.length > 0) {
+      toast({ title: "CPF inválido", description: "Por favor, verifique os CPFs dos membros da família.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Verificar se há pelo menos um responsável
+    const hasResponsavel = familyMembers.some(member => member.is_responsavel);
+    if (!hasResponsavel) {
+      toast({ title: "Responsável obrigatório", description: "É necessário marcar pelo menos um membro como responsável.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
+
+    // Validar senha
+    if (formData.password.length < 6) {
+      toast({ title: "Senha muito curta", description: "A senha deve ter pelo menos 6 caracteres.", variant: "destructive" })
       setIsLoading(false)
       return
     }
@@ -146,16 +249,17 @@ export default function CadastroPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          password: formData.password,
           familyData: {
             name: formData.name,
             cpf: formData.cpf,
             contacts: {
               phone: formData.phone,
-              email: formData.email || ''
+              email: formData.emailFamilia || null
             },
             socioeconomic: {
               incomeRange: formData.incomeRange,
-              familySize: parseInt(formData.familySize)
+              familySize: familyMembers.length
             },
             address: {
               cep: formData.cep,
@@ -164,7 +268,15 @@ export default function CadastroPage() {
               city: formData.city,
               state: formData.state,
               referencePoint: formData.referencePoint || ''
-            }
+            },
+            members: familyMembers.map(member => ({
+              nome: member.nome,
+              idade: parseInt(member.idade),
+              cpf: member.cpf || null,
+              esta_empregado: member.esta_empregado,
+              relacao_familia: member.relacao_familia,
+              is_responsavel: member.is_responsavel
+            }))
           }
         }),
       });
@@ -204,12 +316,29 @@ export default function CadastroPage() {
         <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
           <motion.div initial="hidden" animate="visible" variants={containerVariants}>
             <motion.div variants={itemVariants} className="mb-8 text-center">
-              <h2 className="text-2xl font-bold tracking-tight text-gray-800 mb-2">Informações da Família</h2>
-              <p className="text-gray-600">Informe contatos, dados socioeconômicos e endereço.</p>
+              <h2 className="text-2xl font-bold tracking-tight text-gray-800 mb-2">Cadastrar Família</h2>
+              <p className="text-gray-600">Informe os dados da família e defina uma senha.</p>
             </motion.div>
 
             <form onSubmit={handleSubmit}>
               <motion.div variants={containerVariants} className="space-y-8">
+                
+                {/* Senha */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
+                        <Lock className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Senha de Acesso</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6">
+                      <FormField id="password" label="Senha" type="password" placeholder="Mínimo 6 caracteres" value={formData.password} onChange={handleInputChange} />
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* Informações da Família */}
                 <motion.div variants={itemVariants}>
                   <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
                     <div className="flex items-center gap-3 mb-6">
@@ -224,11 +353,12 @@ export default function CadastroPage() {
                       <FormField id="phone" label="Telefone/WhatsApp" placeholder="(11) 99999-9999" value={formData.phone} onChange={handleInputChange} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mt-6">
-                      <FormField id="email" label="Email (Opcional)" type="email" placeholder="email@exemplo.com" value={formData.email} onChange={handleInputChange} />
+                      <FormField id="emailFamilia" label="Email da Família (Opcional)" type="email" placeholder="familia@exemplo.com" value={formData.emailFamilia} onChange={handleInputChange} />
                     </div>
                   </Card>
                 </motion.div>
 
+                {/* Dados Socioeconômicos */}
                 <motion.div variants={itemVariants}>
                   <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
                     <div className="flex items-center gap-3 mb-6">
@@ -237,13 +367,134 @@ export default function CadastroPage() {
                       </div>
                       <h3 className="text-xl font-semibold text-gray-800">Dados Socioeconômicos</h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6">
                       <FormSelect id="incomeRange" label="Faixa de Renda" placeholder="Selecione a faixa de renda" value={formData.incomeRange} options={incomeRanges} onChange={handleInputChange} />
-                      <FormField id="familySize" label="Tamanho da Família" type="number" min="1" placeholder="Informe o tamanho da família" value={formData.familySize} onChange={handleInputChange} />
                     </div>
                   </Card>
                 </motion.div>
 
+                {/* Membros da Família */}
+                <motion.div variants={itemVariants}>
+                  <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-800">Membros da Família</h3>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={addFamilyMember}
+                        className="bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg px-4 py-2 flex items-center gap-2 hover:shadow-lg transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Adicionar Membro
+                      </Button>
+                    </div>
+
+                    <div className="space-y-6">
+                      {familyMembers.map((member, index) => (
+                        <motion.div
+                          key={member.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="border border-gray-200 rounded-lg p-4 bg-gray-50/50"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium text-gray-800">Membro {index + 1}</h4>
+                            {familyMembers.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeFamilyMember(member.id)}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-600">Nome</Label>
+                              <Input
+                                placeholder="Nome completo"
+                                value={member.nome}
+                                onChange={(e) => handleMemberChange(member.id, 'nome', e.target.value)}
+                                className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-600">Idade</Label>
+                              <Input
+                                type="number"
+                                placeholder="Idade"
+                                min="0"
+                                max="120"
+                                value={member.idade}
+                                onChange={(e) => handleMemberChange(member.id, 'idade', e.target.value)}
+                                className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-600">CPF (Opcional)</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                value={member.cpf}
+                                onChange={(e) => handleMemberChange(member.id, 'cpf', e.target.value)}
+                                className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-600">Relação com a Família</Label>
+                              <Select value={member.relacao_familia} onValueChange={(value) => handleMemberChange(member.id, 'relacao_familia', value)}>
+                                <SelectTrigger className="h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors rounded-lg">
+                                  <SelectValue placeholder="Selecione a relação" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {familyRelations.map((relation) => (
+                                    <SelectItem key={relation} value={relation}>
+                                      {relation}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`empregado-${member.id}`}
+                                  checked={member.esta_empregado}
+                                  onCheckedChange={(checked) => handleMemberChange(member.id, 'esta_empregado', checked as boolean)}
+                                />
+                                <Label htmlFor={`empregado-${member.id}`} className="text-sm font-medium text-gray-600">
+                                  Está empregado
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`responsavel-${member.id}`}
+                                  checked={member.is_responsavel}
+                                  onCheckedChange={(checked) => handleResponsavelChange(member.id, checked as boolean)}
+                                />
+                                <Label htmlFor={`responsavel-${member.id}`} className="text-sm font-medium text-gray-600">
+                                  É o responsável pela família
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </Card>
+                </motion.div>
+
+                {/* Endereço */}
                 <motion.div variants={itemVariants}>
                   <Card className="rounded-2xl shadow-xl border border-gray-100 p-6 transform hover:scale-105 transition-all duration-300">
                     <div className="flex items-center gap-3 mb-6">
@@ -286,10 +537,10 @@ export default function CadastroPage() {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Salvando...
+                      Cadastrando família...
                     </div>
                   ) : (
-                    'Salvar'
+                    'Cadastrar Família'
                   )}
                 </Button>
               </motion.div>
