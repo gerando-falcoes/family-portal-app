@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react"
-import { supabaseBrowserClient } from '@/lib/supabase/browser'
+import { AuthService } from '@/lib/auth'
 import { diagnosticoQuestions } from '@/lib/diagnostico'
 import { QuestionCard } from './components/QuestionCard'
 import { useDiagnostico } from './hooks/useDiagnostico'
@@ -56,14 +56,24 @@ export default function DignometroPage() {
     const fetchFamilyId = async () => {
       setIsLoading(true);
       try {
-        const { data: { session }, error: sessionError } = await supabaseBrowserClient.auth.getSession();
-        if (sessionError || !session?.user?.email) {
+        // Usar sistema de autenticação customizado
+        const session = await AuthService.getSession();
+        
+        if (!session?.access_token) {
           setAuthError('Usuário não autenticado. Redirecionando...');
           router.push('/');
           return;
         }
-        const response = await fetch('/api/familia/get', { headers: { 'Authorization': `Bearer ${session.access_token}` } });
-        if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || 'Erro ao carregar dados.'); }
+        
+        const response = await fetch('/api/familia/get', { 
+          headers: { 'Authorization': `Bearer ${session.access_token}` } 
+        });
+        
+        if (!response.ok) { 
+          const errorData = await response.json(); 
+          throw new Error(errorData.error || 'Erro ao carregar dados.'); 
+        }
+        
         const data = await response.json();
         setFamilyId(data.family.id);
       } catch (err) {
@@ -81,13 +91,19 @@ export default function DignometroPage() {
     setIsSubmitting(true);
     try {
       if (!familyId) throw new Error('ID da família não encontrado.');
-      const { data: { session } } = await supabaseBrowserClient.auth.getSession();
-      if (!session?.user?.email) throw new Error('Usuário não autenticado.');
+      
+      // Usar sistema de autenticação customizado
+      const session = await AuthService.getSession();
+      if (!session?.user) throw new Error('Usuário não autenticado.');
 
       const response = await fetch('/api/dignometro/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ familyId, responses, userEmail: session.user.email }),
+        body: JSON.stringify({ 
+          familyId, 
+          responses, 
+          userEmail: session.user.email || session.user.cpf 
+        }),
       });
 
       const result = await response.json();
