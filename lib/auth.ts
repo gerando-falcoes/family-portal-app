@@ -57,47 +57,23 @@ class SessionManager {
 export class AuthService {
   static async login(cpf: string, password: string): Promise<User | null> {
     try {
-      // Buscar usuário na tabela profiles pelo CPF
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('cpf', cpf)
-        .eq('role', 'familia')
-        .single()
+      // Usar API route server-side para evitar problemas de RLS
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cpf, password }),
+      })
 
-      if (profileError || !profileData) {
-        console.error('CPF não encontrado:', profileError?.message)
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        console.error('Erro no login:', data.error)
         return null
       }
 
-      // Verificar status de aprovação
-      if (profileData.status_aprovacao !== 'aprovado') {
-        console.error('Usuário não aprovado. Status:', profileData.status_aprovacao)
-        return null
-      }
-
-      // Verificar senha (comparação direta - em produção deveria usar hash)
-      if (profileData.senha !== password) {
-        console.error('Senha incorreta')
-        return null
-      }
-
-      // Buscar dados da família usando o CPF
-      const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .select('*')
-        .eq('cpf', cpf)
-        .single()
-
-      const user: User = {
-        id: profileData.id,
-        email: profileData.email || '', // Pode ser vazio agora
-        cpf: profileData.cpf,
-        password: '', // Por segurança, não armazenamos a senha
-        familyId: familyData?.id || '',
-        name: profileData.name,
-        role: profileData.role,
-      }
+      const user: User = data.user
 
       // Criar sessão customizada
       const session: CustomSession = {
@@ -124,20 +100,14 @@ export class AuthService {
       const session = SessionManager.getSession()
       
       if (session && session.user) {
-        // Verificar se o usuário ainda está aprovado
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('status_aprovacao')
-          .eq('cpf', session.user.cpf)
-          .eq('role', 'familia')
-          .single()
-
-        if (profileData?.status_aprovacao !== 'aprovado') {
-          // Se não está mais aprovado, fazer logout
+        // Verificar se a sessão não expirou
+        if (session.expires_at <= Date.now()) {
           this.logout()
           return null
         }
 
+        // Por enquanto, confiar na sessão local
+        // Em produção, você pode querer verificar o status no servidor
         return session.user
       }
 

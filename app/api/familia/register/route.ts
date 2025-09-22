@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       console.warn('Família criada mas membros não foram criados:', familyInsertData.id);
     }
 
-    // 6. Criar perfil na tabela 'profiles' (com senha)
+    // 6. Criar perfil na tabela 'profiles' (com senha e family_id)
     const profileRecord = {
       name: familyData.name,
       cpf: familyData.cpf,
@@ -92,6 +92,7 @@ export async function POST(request: Request) {
       email: familyData.contacts.email || null, // Email opcional
       senha: password, // Senha salva diretamente na tabela profiles
       role: 'familia',
+      family_id: familyInsertData.id, // Vincular com a família criada
       status_aprovacao: 'pendente',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
