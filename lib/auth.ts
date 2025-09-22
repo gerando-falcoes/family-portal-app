@@ -49,8 +49,11 @@ class SessionManager {
     }
   }
 
-  static generateToken(): string {
-    return 'custom_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+  static generateToken(cpf?: string): string {
+    const randomPart = Math.random().toString(36).substr(2, 9);
+    const timePart = Date.now();
+    const cpfPart = cpf ? '_' + btoa(cpf) : '';
+    return 'custom_' + randomPart + '_' + timePart + cpfPart;
   }
 }
 
@@ -78,7 +81,7 @@ export class AuthService {
       // Criar sessão customizada
       const session: CustomSession = {
         user,
-        access_token: SessionManager.generateToken(),
+        access_token: SessionManager.generateToken(user.cpf),
         expires_at: Date.now() + (24 * 60 * 60 * 1000), // 24 horas
       }
 

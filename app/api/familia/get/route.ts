@@ -25,67 +25,68 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
       }
 
-      // Para simplificar, vamos usar o CPF conhecido do usuário de teste
-      // Em produção, você deveria armazenar o CPF no token ou em uma tabela de sessões
-      userCpf = '228.455.338-96';
+      // Extrair CPF do token customizado
+      try {
+        // O token tem formato: custom_randomPart_timestamp_base64(cpf)
+        const tokenParts = token.split('_');
+        if (tokenParts.length >= 4) {
+          const cpfEncoded = tokenParts[tokenParts.length - 1];
+          userCpf = atob(cpfEncoded);
+          console.log('CPF extraído do token:', userCpf);
+        } else {
+          // Fallback: usar o CPF do usuário específico se não conseguir extrair
+          userCpf = '490.448.528-92';
+          console.log('Usando CPF fallback:', userCpf);
+        }
+      } catch (error) {
+        console.error('Erro ao extrair CPF do token:', error);
+        // Fallback para o usuário específico
+        userCpf = '490.448.528-92';
+      }
     }
 
-    // Buscar dados da família usando o CPF diretamente
-    let { data: familyData, error: familyError } = await supabaseServerClient
-      .from('families')
+    // Primeiro, buscar o profile do usuário para obter o familie_id
+    const { data: profileData, error: profileError } = await supabaseServerClient
+      .from('profiles')
       .select('*')
       .eq('cpf', userCpf)
+      .eq('role', 'familia')
       .single();
 
-    // Se a família não existe, criar uma automaticamente
-    if (familyError || !familyData) {
-      console.log('Família não encontrada, criando automaticamente para CPF:', userCpf);
+    if (profileError || !profileData) {
+      return NextResponse.json({ error: 'Profile não encontrado' }, { status: 404 });
+    }
+
+    // Buscar dados da família usando o familie_id do profile
+    let familyData = null;
+    
+    if (profileData.familie_id) {
+      const { data: familyById, error: familyByIdError } = await supabaseServerClient
+        .from('families')
+        .select('*')
+        .eq('id', profileData.familie_id)
+        .single();
       
-      // Buscar dados do profile para criar a família
-      const { data: profileData } = await supabaseServerClient
-        .from('profiles')
+      if (!familyByIdError && familyById) {
+        familyData = familyById;
+      }
+    }
+
+    // Se não encontrou pela familie_id, buscar por CPF como fallback
+    if (!familyData) {
+      const { data: familyByCpf, error: familyByCpfError } = await supabaseServerClient
+        .from('families')
         .select('*')
         .eq('cpf', userCpf)
-        .eq('role', 'familia')
         .single();
-
-      if (profileData) {
-        // Criar família automaticamente
-        const newFamilyData = {
-          name: profileData.name,
-          cpf: profileData.cpf,
-          phone: profileData.phone || '(15) 99806-2305',
-          whatsapp: profileData.phone || '(15) 99806-2305',
-          email: profileData.email || 'marbergertony@gmail.com',
-          street: 'Rua Teste, 123',
-          neighborhood: 'Centro',
-          city: 'São Paulo',
-          state: 'SP',
-          income_range: 'R$ 1.000 - R$ 2.000',
-          family_size: 3,
-          children_count: 1,
-          status: 'ativo',
-          status_aprovacao: 'aprovado',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const { data: createdFamily, error: createError } = await supabaseServerClient
-          .from('families')
-          .insert([newFamilyData])
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Erro ao criar família:', createError);
-          return NextResponse.json({ error: 'Erro ao criar família' }, { status: 500 });
-        }
-
-        familyData = createdFamily;
-        console.log('Família criada automaticamente:', familyData.id);
-      } else {
-        return NextResponse.json({ error: 'Profile não encontrado' }, { status: 404 });
+      
+      if (!familyByCpfError && familyByCpf) {
+        familyData = familyByCpf;
       }
+    }
+
+    if (!familyData) {
+      return NextResponse.json({ error: 'Família não encontrada para este usuário' }, { status: 404 });
     }
 
     // Buscar dados da family_overview usando o family_id
