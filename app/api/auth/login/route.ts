@@ -37,15 +37,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 });
     }
 
-    // Buscar dados da família usando o family_id do profile ou CPF como fallback
+    // Buscar dados da família usando o familie_id do profile ou CPF como fallback
     let familyData = null;
     
-    if (profileData.family_id) {
-      // Usar family_id se disponível
+    if (profileData.familie_id) {
+      // Usar familie_id se disponível
       const { data: familyById } = await supabaseServerClient
         .from('families')
         .select('*')
-        .eq('id', profileData.family_id)
+        .eq('id', profileData.familie_id)
         .single();
       familyData = familyById;
     } else {

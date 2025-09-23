@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       console.warn('Família criada mas membros não foram criados:', familyInsertData.id);
     }
 
-    // 6. Criar perfil na tabela 'profiles' (com senha e family_id)
+    // 6. Criar perfil na tabela 'profiles' (com senha e familie_id)
     const profileRecord = {
       name: familyData.name,
       cpf: familyData.cpf,
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       email: familyData.contacts.email || null, // Email opcional
       senha: password, // Senha salva diretamente na tabela profiles
       role: 'familia',
-      family_id: familyInsertData.id, // Vincular com a família criada
+      familie_id: familyInsertData.id, // Vincular com a família criada usando o nome correto da coluna
       status_aprovacao: 'pendente',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -109,14 +109,37 @@ export async function POST(request: Request) {
       // Se falhar ao criar o perfil, não falha o cadastro da família
       // mas loga o erro para investigação
       console.warn('Família criada mas perfil não foi criado:', familyInsertData.id);
+    } else if (profileInsertData) {
+      // 7. Atualizar a família com o profile_id para completar a vinculação bidirecional
+      const { error: updateFamilyError } = await supabaseServerClient
+        .from('families')
+        .update({ 
+          profile_id: profileInsertData.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', familyInsertData.id);
+
+      if (updateFamilyError) {
+        console.error('Erro ao vincular profile_id na família:', updateFamilyError);
+        console.warn('Profile criado mas vinculação bidirecional falhou');
+      } else {
+        console.log('Vinculação bidirecional criada com sucesso:', {
+          family_id: familyInsertData.id,
+          profile_id: profileInsertData.id
+        });
+      }
     }
 
-    // 7. Retornar sucesso
+    // 8. Retornar sucesso
     return NextResponse.json({ 
-      message: 'Família, membros e perfil criados com sucesso!', 
+      message: 'Família, membros e perfil criados com sucesso! Vinculação bidirecional estabelecida.', 
       family: familyInsertData,
       members: membersInsertData || [],
-      profile: profileInsertData || null
+      profile: profileInsertData || null,
+      relationships: {
+        profile_familie_id: profileInsertData?.id ? familyInsertData.id : null,
+        family_profile_id: profileInsertData?.id || null
+      }
     });
 
   } catch (error) {
