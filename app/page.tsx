@@ -112,7 +112,7 @@ export default function LoginPage() {
                 type="button" 
                 className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
               >
-                Esqueci minha senha
+                Esqueci minha senha.
               </button>
             </div>
             
